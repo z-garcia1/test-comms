@@ -511,19 +511,30 @@
 }
 
 .select-trigger {
+    display: flex;
+    justify-content: space-between;  /* Spread text and arrow */
+    align-items: center;
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     background: white;
     font-size: 14px;
-    text-align: left;
     cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    text-align: left;
+    color: #333;  /* Ensures text is visible */
 }
 
+.dropdown-arrow {
+    font-size: 14px;
+    color: #555;  /* Ensures arrow visibility */
+    margin-left: auto;  /* Push to the right */
+}
+
+.select-trigger span {
+    color: #333 !important; /* Ensure visibility */
+}
+        
 .select-trigger:hover {
     border-color: #cbd5e1;
 }
@@ -565,6 +576,9 @@
     padding: 6px 12px;
     cursor: pointer;
     font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Space between emoji and text */
 }
 
 .dropdown-option:hover {
@@ -591,42 +605,46 @@
     <div class="sidebar">
         <h3>&nbsp;</h3>
         <!-- LLM Writing Style Dropdown -->
-        <div class="select-form-group">
+       <div class="select-form-group">
     <label class="select-form-label">
         LLM Writing Style
+        <span class="select-required">*</span>
     </label>
     <div class="select-wrapper">
         <div class="select-container">
             <button class="select-trigger" id="writingStyle-trigger">
-                <span>Default</span> <!-- Set Default as the initial state -->
+                <span>Default</span>
+                <span class="dropdown-arrow">▼</span> <!-- Dropdown arrow -->
             </button>
             <div class="custom-dropdown" id="writingStyle-dropdown">
                 <input type="text" class="dropdown-search-input" placeholder="Search style..." />
                 <div class="options-list" id="writingStyle-options">
-                    <div class="dropdown-option" data-value="default">Default</div>
-                    <div class="dropdown-option" data-value="formal">Formal</div>
-                    <div class="dropdown-option" data-value="creative">Creative</div>
+                    <div class="dropdown-option" data-value="default">-- Default --</div>
+                    <div class="dropdown-option" data-value="formal">📄 Formal</div>
+                    <div class="dropdown-option" data-value="creative">🎨 Creative</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-        <!-- Quick Prompt Dropdown -->
+
 <div class="select-form-group">
     <label class="select-form-label">
         Quick Prompt
+        <span class="select-required">*</span>
     </label>
     <div class="select-wrapper">
         <div class="select-container">
             <button class="select-trigger" id="quickPrompt-trigger">
-                <span>-- Select a Prompt --</span> <!-- Set initial state -->
+                <span>-- Select a Prompt --</span>
+                <span class="dropdown-arrow">▼</span> <!-- Dropdown arrow -->
             </button>
             <div class="custom-dropdown" id="quickPrompt-dropdown">
                 <input type="text" class="dropdown-search-input" placeholder="Search prompt..." />
                 <div class="options-list" id="quickPrompt-options">
                     <div class="dropdown-option" data-value="">-- Select a Prompt --</div>
-                    <div class="dropdown-option" data-value="file_summary">File Summary</div>
-                    <div class="dropdown-option" data-value="categorize">Categorize</div>
+                    <div class="dropdown-option" data-value="file_summary">📂 File Summary</div>
+                    <div class="dropdown-option" data-value="categorize">🗂 Categorize</div>
                 </div>
             </div>
         </div>
