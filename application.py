@@ -28,7 +28,7 @@ bedrock = boto3.client('bedrock-runtime',
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 
-TI_LOGIN_URL = "https://entlogin.ti.com/as/authorization.oauth2?response_type=code&client_id=DCIT_ALL_COMMS_IR_AI&redirect_uri=https%3A%2F%2F8yprp6fbvy.us-east-1.awsapprunner.com%2Fcallback&prompt=login"
+TI_LOGIN_URL = "https://entlogin.ti.com/as/authorization.oauth2?response_type=code&client_id=DCIT_ALL_COMMS_IR_AI&redirect_uri=https%3A%2F%2Fern2xy8fzd.us-east-1.awsapprunner.com%2Fcallback&prompt=login"
 
 TOKEN_CHARACTERS = string.ascii_letters + string.digits + "!?@#$&%"
 VALID_TOKENS = []
