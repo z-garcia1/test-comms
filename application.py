@@ -1,0 +1,291 @@
+from flask import Flask, request, render_template, jsonify, redirect, session
+import boto3
+import json
+import os
+import re
+import logging
+import time
+import random
+import string
+import requests
+import base64
+import fitz  # PyMuPDF for PDF extraction
+import pandas as pd
+import pptx
+from docx import Document
+from werkzeug.utils import secure_filename
+from bs4 import BeautifulSoup
+from langchain_community.tools import DuckDuckGoSearchResults
+from langchain_core.rate_limiters import InMemoryRateLimiter
+
+# AWS Bedrock client setup
+bedrock = boto3.client('bedrock-runtime', 
+                       region_name=os.environ.get('Region'),
+                       aws_access_key_id=os.environ.get('AccessKeyId'),
+                       aws_secret_access_key=os.environ.get('SecretAccessKey'))
+
+# Flask app setup
+app = Flask(__name__)
+app.secret_key = "your_secret_key"
+
+TI_LOGIN_URL = "https://entlogin.ti.com/as/authorization.oauth2?response_type=code&client_id=DCIT_ALL_COMMS_IR_AI&redirect_uri=https%3A%2F%2F8yprp6fbvy.us-east-1.awsapprunner.com%2Fcallback&prompt=login"
+
+TOKEN_CHARACTERS = string.ascii_letters + string.digits + "!?@#$&%"
+VALID_TOKENS = []
+
+def generate_secure_token():
+    return "".join(random.choices(TOKEN_CHARACTERS, k=20))
+
+def clean_expired_tokens():
+    """Remove expired tokens from the list"""
+    global VALID_TOKENS
+    current_time = time.time()
+    VALID_TOKENS = [(token, exp) for token, exp in VALID_TOKENS if exp > current_time]
+
+
+# Configure upload folder
+UPLOAD_FOLDER = "uploads"
+ALLOWED_EXTENSIONS = {"pdf", "docx", "xlsx", "pptx", "png", "jpeg", "jpg"}
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+# Disable logging
+app.logger.disabled = True
+log = logging.getLogger('werkzeug')
+log.disabled = True
+logging.basicConfig(handlers=[logging.NullHandler()])
+logging.getLogger().setLevel(logging.CRITICAL)
+logging.getLogger().disabled = True
+
+chat_memory = []
+
+### ✅ Page Routing ###
+@app.route('/')
+def home():
+    user_token = request.args.get("token")
+    # Clean expired tokens
+    clean_expired_tokens()
+    # Allow access if the token is in the valid token list
+    if not user_token or not any(t[0] == user_token for t in VALID_TOKENS):
+        return redirect("/login")
+    return render_template("acknowledge.html")
+
+@app.route("/login")
+def login():
+    # Redirect the user to the TI login page
+    return redirect(TI_LOGIN_URL)
+
+@app.route("/callback")
+def callback():
+    """Handle the redirection back from TI login"""
+    auth_code = request.args.get("code")
+    if not auth_code:
+        return "Authorization failed", 400
+    new_token = generate_secure_token()
+    expiration_time = time.time() + 300  # Token expires in 5 minutes
+    # Store new token in the valid list
+    VALID_TOKENS.append((new_token, expiration_time))
+    return redirect(f"/loading?code={auth_code}&token={new_token}")
+
+@app.route("/loading")
+def loading():
+    """Loading page to store the token before redirecting to home"""
+    token = request.args.get("token")
+    time.sleep(3)
+    # Ensure the token is valid before proceeding
+    if not token or not any(t[0] == token for t in VALID_TOKENS):
+        auth_code = request.args.get("code")
+        return redirect("/callback?code={auth_code}")
+    return redirect(f"/?token={token}")
+
+@app.route("/logout")
+def logout():
+    """Log out and clear session"""
+    session.pop("user_authenticated", None)
+    return redirect("/login")
+
+@app.route('/acknowledge', methods=["POST"])
+def acknowledge():
+    return render_template("index.html")
+
+### ✅ File Processing Functions ###
+def convert_image_to_base64(file_path):
+    """Converts an image file to a Base64 string."""
+    with open(file_path, "rb") as file:
+        return base64.b64encode(file.read()).decode("utf-8")
+
+def extract_text_from_pdf(file_path):
+    """Extracts text from a PDF file."""
+    doc = fitz.open(file_path)
+    text = "\n".join(page.get_text() for page in doc)
+    return text.strip()
+
+def extract_text_from_docx(file_path):
+    """Extracts text from a Word document (.docx)."""
+    doc = Document(file_path)
+    text = "\n".join([para.text for para in doc.paragraphs])
+    return text.strip()
+
+def extract_text_from_xlsx(file_path):
+    """Extracts text from an Excel file (.xlsx)."""
+    dfs = pd.read_excel(file_path, sheet_name=None)  # Read all sheets
+    text = []
+    for sheet_name, df in dfs.items():
+        text.append(f"Sheet: {sheet_name}\n")
+        text.append(df.to_string(index=False))  # Convert dataframe to string
+    return "\n".join(text).strip()
+
+def extract_text_from_pptx(file_path):
+    """Extracts text from a PowerPoint file (.pptx)."""
+    presentation = pptx.Presentation(file_path)
+    text = []
+    for slide in presentation.slides:
+        for shape in slide.shapes:
+            if hasattr(shape, "text"):
+                text.append(shape.text)
+    return "\n".join(text).strip()
+
+# Format AI response for HTML rendering
+def format_ai_response(response):
+    lines = response.split("\n")
+    formatted_lines = []
+    for line in lines:
+        match = re.match(r'^(\d+.*?:)(.*)$', line.strip())
+        if match:
+            bold_part = f"<b>{match.group(1)}</b>"
+            remaining_part = match.group(2)
+            formatted_lines.append(f"{bold_part}{remaining_part}")
+        else:
+            formatted_lines.append(line)
+    
+    return "<br>".join(formatted_lines)
+
+def process_file(file_path, file_type):
+    """Processes the file based on its type and returns Claude-compatible content."""
+    if file_type in ["jpg", "jpeg", "png"]:
+        base64_string = convert_image_to_base64(file_path)
+        return [{"type": "image", "source": {"type": "base64", "media_type": f"image/{file_type}", "data": base64_string}}]
+    
+    elif file_type == "pdf":
+        text = extract_text_from_pdf(file_path)
+    
+    elif file_type == "docx":
+        text = extract_text_from_docx(file_path)
+    
+    elif file_type == "xlsx":
+        text = extract_text_from_xlsx(file_path)
+    
+    elif file_type == "pptx":
+        text = extract_text_from_pptx(file_path)
+    
+    else:
+        return [{"type": "text", "text": f"Unsupported file type: {file_type}"}]
+
+    return [{"type": "text", "text": text}] if text else [{"type": "text", "text": "No readable content found in file."}]
+
+def format_ai_response(response):
+    lines = response.split("\n")
+    formatted_lines = []
+    for line in lines:
+        match = re.match(r'^(\d+.*?:)(.*)$', line.strip())
+        if match:
+            bold_part = f"<b>{match.group(1)}</b>"
+            remaining_part = match.group(2)
+            formatted_lines.append(f"{bold_part}{remaining_part}")
+        else:
+            formatted_lines.append(line)
+    
+    return "<br>".join(formatted_lines)
+
+### ✅ Chat Route (Supports Text, Files, and Web Search) ###
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    """Handles user messages & a single file upload, then sends them to Claude."""
+  
+    if request.content_type == "application/json":
+        data = request.get_json()
+        user_message = data.get("message", "")
+        file = None  # No file in JSON requests
+    else:
+        user_message = request.form.get("message", "")
+        file = request.files.get("file")  # Expecting only one file
+
+    if not user_message and not file:
+        return jsonify({"error": "No input provided"}), 400
+    content = [{"type": "text", "text": user_message}] if user_message else []
+
+    if file:
+        file_ext = file.filename.split(".")[-1].lower()
+        if file_ext not in ALLOWED_EXTENSIONS:
+            return jsonify({"error": "Invalid file type"}), 400
+
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(file_path)
+
+        try:
+            content.extend(process_file(file_path, file_ext))
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+              
+    chat_memory.append({"role": "user", "content": user_message})
+    ai_response = invoke_claude_bedrock(content)
+    formatted_response = format_ai_response(ai_response)
+    chat_memory.append({"role": "assistant", "content": ai_response})
+
+    return jsonify({"response": f"""<br><br><div><pre>{formatted_response}</pre><button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""})
+  
+### ✅ Claude AI Invocation ###
+def invoke_claude_bedrock(content):
+    """Sends user messages or file content to Claude AI via AWS Bedrock."""
+    
+    payload = {
+    "anthropic_version": "bedrock-2023-05-31",
+    "max_tokens": 4000,
+    "messages": chat_memory if not any(item.get("type") == "text" for item in content) else [{"role": "user", "content": content}]
+    }
+
+    response = bedrock.invoke_model(
+        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps(payload)
+    )
+
+    response_body = response["body"].read().decode("utf-8")
+    result = json.loads(response_body)
+
+    # Extract only text responses
+    if "content" in result and isinstance(result["content"], list):
+        extracted_text = "\n".join(item["text"] for item in result["content"] if item["type"] == "text")
+    else:
+        extracted_text = "No valid response from Claude"
+
+    return extracted_text
+
+### ✅ Web Search Setup ###
+rate_limiter = InMemoryRateLimiter(requests_per_second=0.2, check_every_n_seconds=0.1)
+search_tool = DuckDuckGoSearchResults(rate_limiter=rate_limiter)
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/112.0.0.0"
+]
+
+def safe_search(query):
+    """Search DuckDuckGo while rotating User-Agent."""
+    time.sleep(random.uniform(3, 10))
+    response = search_tool.invoke(query)
+    return response
+
+### ✅ Flask App Execution for AWS App Runner ###
+if __name__ == "__main__":
+    app.run()
+
+

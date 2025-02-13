@@ -1,0 +1,14 @@
+flask
+gunicorn
+boto3
+langchain-community
+beautifulsoup4
+langchain-core
+requests
+duckduckgo-search
+PyMuPDF
+python-pptx
+openpyxl
+pandas
+python-docx
+Werkzeug
