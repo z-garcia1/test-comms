@@ -682,6 +682,98 @@ const focusTrigger = document.getElementById('focus-trigger');
             color:#2563eb; 
             padding: 10px 20px;
             text-decoration:none;}
+            .select-form-group {
+    margin-bottom: 1rem;
+}
+
+.select-form-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.select-required {
+    color: #dc2626;
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+.select-container {
+    position: relative;
+    width: 100%;
+}
+
+.select-trigger {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.select-trigger:hover {
+    border-color: #cbd5e1;
+}
+
+.custom-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-top: 4px;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    z-index: 10;
+    display: none;
+}
+
+.custom-dropdown.active {
+    display: block;
+}
+
+.dropdown-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+    outline: none;
+}
+
+.options-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.dropdown-option {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.dropdown-option:hover {
+    background: #f1f5f9;
+}
+
+.no-results {
+    padding: 8px 12px;
+    color: #64748b;
+    font-size: 14px;
+}
     </style>
 </head>
 <body>
@@ -697,20 +789,48 @@ const focusTrigger = document.getElementById('focus-trigger');
     <div class="sidebar">
         <h3>&nbsp;</h3>
         <!-- LLM Writing Style Dropdown -->
-        <label for="writingStyle">LLM Writing Style</label>
-        <select id="writingStyle">
-            <option value="default" selected>Default</option>
-            <option value="formal">Formal</option>
-            <option value="creative">Creative</option>
-        </select>
-        <br>
+        <div class="select-form-group">
+    <label class="select-form-label">
+        LLM Writing Style
+    </label>
+    <div class="select-wrapper">
+        <div class="select-container">
+            <button class="select-trigger" id="writingStyle-trigger">
+                <span>Default</span> <!-- Set Default as the initial state -->
+            </button>
+            <div class="custom-dropdown" id="writingStyle-dropdown">
+                <input type="text" class="dropdown-search-input" placeholder="Search style..." />
+                <div class="options-list" id="writingStyle-options">
+                    <div class="dropdown-option" data-value="default">Default</div>
+                    <div class="dropdown-option" data-value="formal">Formal</div>
+                    <div class="dropdown-option" data-value="creative">Creative</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
         <!-- Quick Prompt Dropdown -->
-        <label for="quickPrompt">Quick Prompt</label>
-        <select id="quickPrompt">
-            <option value="" selected>-- Select a Prompt --</option>
-            <option value="file_summary">File Summary</option>
-            <option value="categorize">Categorize</option>
-        </select>
+<div class="select-form-group">
+    <label class="select-form-label">
+        Quick Prompt
+    </label>
+    <div class="select-wrapper">
+        <div class="select-container">
+            <button class="select-trigger" id="quickPrompt-trigger">
+                <span>-- Select a Prompt --</span> <!-- Set initial state -->
+            </button>
+            <div class="custom-dropdown" id="quickPrompt-dropdown">
+                <input type="text" class="dropdown-search-input" placeholder="Search prompt..." />
+                <div class="options-list" id="quickPrompt-options">
+                    <div class="dropdown-option" data-value="">-- Select a Prompt --</div>
+                    <div class="dropdown-option" data-value="file_summary">File Summary</div>
+                    <div class="dropdown-option" data-value="categorize">Categorize</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
         <br><br>
         <button class="toggle-advanced" id="toggleAdvanced">Advanced Settings&nbsp; ◀</button>
         <!-- Advanced Settings (Initially Hidden) -->
@@ -948,40 +1068,99 @@ document.getElementById("toggleAdvanced").addEventListener("click", function () 
             button.innerHTML = "Advanced Settings ◀"; 
         }
     });
-    // Update parameters based on LLM Writing Style selection
-    document.getElementById("writingStyle").addEventListener("change", function () {
-        var selectedStyle = this.value;
-        var temperatureInput = document.getElementById("temperature");
-        var topPInput = document.getElementById("topP");
-        var topKInput = document.getElementById("topK");
+document.addEventListener("DOMContentLoaded", function () {
+    // LLM Writing Style Dropdown
+    const writingStyleTrigger = document.getElementById('writingStyle-trigger');
+    const writingStyleDropdown = document.getElementById('writingStyle-dropdown');
+    const writingStyleOptions = document.getElementById('writingStyle-options');
+    
+    let isWritingStyleOpen = false;
 
-        if (selectedStyle === "default") {
-            temperatureInput.value = 0.7;
-            topPInput.value = 0.9;
-            topKInput.value = 50;
-        } else if (selectedStyle === "formal") {
-            temperatureInput.value = 0.1;
-            topPInput.value = 0.4;
-            topKInput.value = 5;
-        } else if (selectedStyle === "creative") {
-            temperatureInput.value = 1.0;
-            topPInput.value = 1.0;
-            topKInput.value = 70;
+    function toggleWritingStyleDropdown() {
+        isWritingStyleOpen = !isWritingStyleOpen;
+        writingStyleDropdown.classList.toggle('active');
+    }
+
+    writingStyleTrigger.addEventListener('click', toggleWritingStyleDropdown);
+
+    writingStyleOptions.addEventListener('click', (e) => {
+        const option = e.target.closest('.dropdown-option');
+        if (option) {
+            const value = option.dataset.value;
+            writingStyleTrigger.querySelector('span').textContent = option.textContent;
+            writingStyleDropdown.classList.remove('active');
+            isWritingStyleOpen = false;
+
+            // Update LLM parameters based on selected writing style
+            const temperature = document.getElementById("temperature");
+            const topP = document.getElementById("topP");
+            const topK = document.getElementById("topK");
+
+            if (value === "default") {
+                temperature.value = 0.7;
+                topP.value = 0.9;
+                topK.value = 50;
+            } else if (value === "formal") {
+                temperature.value = 0.1;
+                topP.value = 0.4;
+                topK.value = 5;
+            } else if (value === "creative") {
+                temperature.value = 1.0;
+                topP.value = 1.0;
+                topK.value = 70;
+            }
         }
     });
-    // Quick Prompt Selection
-    document.getElementById("quickPrompt").addEventListener("change", function () {
-        var selectedPrompt = this.value;
-        var userInput = document.getElementById("user-input");
 
-        if (selectedPrompt === "file_summary") {
-            userInput.value = "Analyze the content of the uploaded file and generate a **detailed, structured, and insightful summary** that captures all key points while maintaining clarity and brevity. Follow these structured steps: 1. Contextual Understanding: - Identify the **type of file** (e.g., research paper, business report, financial statement, legal document, technical guide, presentation). - Explain the **purpose and audience** of the document. 2. Key Takeaways: - Extract and summarize the **core ideas, main arguments, or objectives** of the document in a structured format. - Highlight the most **critical data, findings, or themes** using concise, precise wording. - If applicable, provide **quantitative insights** (e.g., numbers, financials, statistics). 3. Detailed Breakdown: - Summarize each section in a **logical order**, preserving the original intent. - Include **word-for-word excerpts** of the most important and impactful sentences, enclosed in quotation marks. - Where necessary, **paraphrase complex explanations** into a more understandable format. 4. Implications & Applications: - Explain how the information in the file could be **used, interpreted, or applied** by employees at Texas Instruments. - If relevant, provide **actionable recommendations** based on the document’s content. 5. Summary Style & Format: - Write in **clear, professional, and easy-to-understand language**. - Structure the response using **concise bullet points or short paragraphs**. - Use **bold headings** to separate different sections for readability. - Ensure the summary remains **neutral, factual, and free from personal opinions**. If the document contains **tables, charts, or structured data**, describe the **most critical insights** from them in plain language. If the document is **highly technical**, summarize using **analogies and simplifications** without losing accuracy. If the document is **historical, literary, or philosophical**, highlight key themes and arguments, ensuring any direct quotes reflect the **author’s original intent**. Return the summary in the following structured format: **File Summary Output Format:**---File Type & Purpose: _(Brief description of the document type and intent.)_ Key Takeaways: _(Summarized bullet points of critical information.)_Section Breakdown: _(Summaries for individual sections, including key quotes.)_Data & Insights (if applicable): _(Summary of relevant statistics, tables, or financials.)_ Practical Applications: _(How the document’s content can be applied or interpreted.)_";
-        } else if (selectedPrompt === "categorize") {
-            userInput.value = "Categorize the following text";
-        } else {
-            userInput.value = ""; // Reset when blank is selected
+    // Quick Prompt Dropdown
+    const quickPromptTrigger = document.getElementById('quickPrompt-trigger');
+    const quickPromptDropdown = document.getElementById('quickPrompt-dropdown');
+    const quickPromptOptions = document.getElementById('quickPrompt-options');
+
+    let isQuickPromptOpen = false;
+
+    function toggleQuickPromptDropdown() {
+        isQuickPromptOpen = !isQuickPromptOpen;
+        quickPromptDropdown.classList.toggle('active');
+    }
+
+    quickPromptTrigger.addEventListener('click', toggleQuickPromptDropdown);
+
+    quickPromptOptions.addEventListener('click', (e) => {
+        const option = e.target.closest('.dropdown-option');
+        if (option) {
+            const value = option.dataset.value;
+            quickPromptTrigger.querySelector('span').textContent = option.textContent;
+            quickPromptDropdown.classList.remove('active');
+            isQuickPromptOpen = false;
+
+            // Update user input based on Quick Prompt selection
+            const userInput = document.getElementById("user-input");
+            if (value === "file_summary") {
+                userInput.value = "Summarize the file content.";
+            } else if (value === "categorize") {
+                userInput.value = "Categorize the following text.";
+            } else {
+                userInput.value = "";
+            }
         }
     });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.select-container')) {
+            writingStyleDropdown.classList.remove('active');
+            isWritingStyleOpen = false;
+            quickPromptDropdown.classList.remove('active');
+            isQuickPromptOpen = false;
+        }
+    });
+
+    // Set Initial States on Load
+    writingStyleTrigger.querySelector('span').textContent = "Default";  // LLM Writing Style default
+    quickPromptTrigger.querySelector('span').textContent = "-- Select a Prompt --";  // Quick Prompt default
+});
+
 </script>
 </body>
 </html>
