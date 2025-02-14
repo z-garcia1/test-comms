@@ -531,7 +531,7 @@
     color: #555;  /* Ensures arrow visibility */
     margin-left: auto;  /* Push to the right */
     display: inline-block;
-    transform: rotate(90deg);
+    transform: rotate(-90deg);
 }
 
 .select-trigger span {
@@ -629,12 +629,11 @@
        <div class="select-form-group">
     <label class="select-form-label">
         LLM Writing Style
-        <span class="select-required">*</span>
     </label>
     <div class="select-wrapper">
         <div class="select-container">
             <button class="select-trigger" id="writingStyle-trigger">
-                <span>Default</span>
+                <span>-- Default --</span>
                 <span class="dropdown-arrow">❮</span> <!-- Dropdown arrow -->
             </button>
             <div class="custom-dropdown" id="writingStyle-dropdown">
@@ -651,13 +650,12 @@
 <div class="select-form-group">
     <label class="select-form-label">
         Quick Prompt
-        <span class="select-required">*</span>
     </label>
     <div class="select-wrapper">
         <div class="select-container">
             <button class="select-trigger" id="quickPrompt-trigger">
                 <span>-- Select a Prompt --</span>
-                <span class="dropdown-arrow">▼</span> <!-- Dropdown arrow -->
+                <span class="dropdown-arrow">❮</span> <!-- Dropdown arrow -->
             </button>
             <div class="custom-dropdown" id="quickPrompt-dropdown">
                 <input type="text" class="dropdown-search-input" placeholder="Search prompt..." />
@@ -755,8 +753,8 @@
     const chatBox = document.getElementById('chat-box');
     const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
-    const files = fileInput.files;
-    
+    const file = fileInput.files[0];
+
     // Capture advanced AI settings
     const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
     const temperature = document.getElementById("temperature")?.value || "0.7";
@@ -798,13 +796,10 @@
         let response;
         let data;
 
-        if (files.length > 0) {
+        if (file) {
             const formData = new FormData();
-            formData.append("message", modifiedMessage);  // Include user message
-
-            for (let file of files) {
-                formData.append("file", file);  // Append each file to FormData
-            }
+            formData.append("message", modifiedMessage); // Send modified message with AI settings
+            formData.append("file", file); // Single file upload
 
             response = await fetch("/chat", {
                 method: "POST",
@@ -984,7 +979,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // Update user input based on Quick Prompt selection
             const userInput = document.getElementById("user-input");
             if (value === "file_summary") {
-                userInput.value = "Summarize the file content.";
+                userInput.value = "Tell me who and what the file is about. Summarize each section of the file content, pull word-for-word quotes and exact statistics that support your summarized statements, and present them to the user. If there are other documents to reference, perform a comparative analysis.";
             } else if (value === "summarize") {
                 userInput.value = "Summarize the provided text while retaining its core message, key details, and overall intent. Ensure the summary is concise, coherent, and contextually accurate, without introducing new information or omitting critical points. Adapt the level of detail based on the length and complexity of the original text, maintaining the appropriate tone and style. If the text contains numerical data, technical terms, or industry-specific jargon, preserve their accuracy while improving readability. Avoid redundancy and ensure the output is well-structured, making it easy to understand for the intended audience. If the content includes multiple sections, summarize each key point proportionally.";
             } else if (value === "categorize") {
