@@ -227,7 +227,21 @@ def chat():
         file.save(file_path)
 
         try:
-            content.extend(process_file(file_path, file_ext))
+            if file_ext in ["png", "jpeg", "jpg"]:
+                # Use image-specific logic for Claude 3.5 Sonnet
+                base64_string = convert_image_to_base64(file_path)
+                content.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": f"image/{file_ext}",
+                        "data": base64_string
+                    }
+                })
+            else:
+                # Use existing logic for text-based files
+                content.extend(process_file(file_path, file_ext))
+
         finally:
             if os.path.exists(file_path):
                 os.remove(file_path)
