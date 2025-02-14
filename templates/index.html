@@ -733,154 +733,144 @@
     </div>
 </div>
 <script>
-   let selectedFiles = []; // Store selected files
+  document.addEventListener("DOMContentLoaded", function () {
+    let selectedFiles = []; // Store selected files
     let useWeb = false; // Track web search status
 
-// Toggle Web Search Button
-function toggleWebSearch() {
-    useWeb = !useWeb;
-    const webSearchButton = document.querySelector(".file i.fa-globe");
-    webSearchButton.style.color = useWeb ? "#00bfff" : "";
-}
+    document.getElementById('fileUpload')?.addEventListener('change', function () {
+        const fileInfo = document.getElementById('fileInfo');
+        const fileNameDisplay = document.getElementById('fileName');
 
-document.getElementById('fileUpload').addEventListener('change', function () {
-    const fileInfo = document.getElementById('fileInfo');
-    const fileNameDisplay = document.getElementById('fileName');
+        if (this.files.length > 0) {
+            fileNameDisplay.textContent = Array.from(this.files).map(file => file.name).join(", ");
+            fileInfo.style.display = 'block';
+        } else {
+            fileNameDisplay.textContent = "";
+            fileInfo.style.display = 'none';
+        }
+    });
 
-    if (this.files.length > 0) {
-        fileNameDisplay.textContent = Array.from(this.files).map(file => file.name).join(", ");
-        fileInfo.style.display = 'block';
-    } else {
-        fileNameDisplay.textContent = "";
-        fileInfo.style.display = 'none';
-    }
-});
+    async function sendMessage() {
+        const userInput = document.getElementById('user-input');
+        const chatBox = document.getElementById('chat-box');
+        const userMessage = userInput?.value.trim();
+        const files = document.getElementById('fileUpload').files;
 
-async function sendMessage() {
-    const userInput = document.getElementById('user-input');
-    const chatBox = document.getElementById('chat-box');
-    const userMessage = userInput.value.trim();
-    const files = document.getElementById('fileUpload').files;
-
-    // Capture advanced settings
-    const systemPrompt = document.getElementById("systemPrompt").value.trim();
-    const temperature = document.getElementById("temperature").value;
-    const topP = document.getElementById("topP").value;
-    const topK = document.getElementById("topK").value;
-
-    if (userMessage === "" && files.length === 0) {
-        alert("Please enter a message or upload at least one file.");
-        return;
-    }
-
-    // Construct hidden prompt prefix
-    let hiddenPrompt = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
-
-    // Append user message to hidden prompt
-    const modifiedMessage = hiddenPrompt + userMessage;
- // Display user message
-    if (userMessage.trim() !== '') {
-                const userMessageElement = document.createElement('div');
-                userMessageElement.className = 'chat-message user';
-                userMessageElement.textContent = userMessage;
-                chatBox.appendChild(userMessageElement);
-                userInput.value = '';
-    }
-    const spinner = document.createElement("div");
-    spinner.className = "spinner";
-    chatBox.appendChild(spinner);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    try {
-        let response;
-        let data;
-
-        if (files.length > 0) {
-            let hasImage = false;
-const formData = new FormData();
-formData.append("message", modifiedMessage); // Use modified message
-
-for (let file of files) {
-    const fileType = file.type.split("/")[0]; // Check if it's an image
-    if (fileType === "image") {
-        if (hasImage) {
-            alert("Only one image can be uploaded at a time.");
+        if (!userInput || !chatBox) {
+            console.error("Missing chat UI elements.");
             return;
         }
-        hasImage = true;
-    }
-    formData.append("file", file);
-}
 
-if (hasImage) {
-    response = await fetch("/chat/image", { // New endpoint for image processing
-        method: "POST",
-        body: formData
-    });
-} else {
-    response = await fetch("/chat", { // Normal text and file chat
-        method: "POST",
-        body: formData
-    });
-}
+        // Capture advanced settings
+        const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
+        const temperature = document.getElementById("temperature")?.value || "0.7";
+        const topP = document.getElementById("topP")?.value || "0.9";
+        const topK = document.getElementById("topK")?.value || "50";
 
-        if (!response.ok) {
-            throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
-
+        if (userMessage === "" && files.length === 0) {
+            alert("Please enter a message or upload at least one file.");
+            return;
         }
 
-        data = await response.json();
+        let hiddenPrompt = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
+        const modifiedMessage = hiddenPrompt + userMessage;
 
-        if (data.error) {
-            throw new Error(data.error);
+        // Display user message
+        if (userMessage.trim() !== '') {
+            const userMessageElement = document.createElement('div');
+            userMessageElement.className = 'chat-message user';
+            userMessageElement.textContent = userMessage;
+            chatBox.appendChild(userMessageElement);
+            userInput.value = '';
         }
 
-        spinner.style.display = "none";
+        const spinner = document.createElement("div");
+        spinner.className = "spinner";
+        chatBox.appendChild(spinner);
+        chatBox.scrollTop = chatBox.scrollHeight;
 
-        if (data.response) {
-            const aiMessageElement = document.createElement("div");
-            aiMessageElement.className = "chat-message ai";
-            aiMessageElement.innerHTML = data.response;
-            chatBox.appendChild(aiMessageElement);
-        } else {
-            throw new Error("Empty response from server.");
+        try {
+            let response;
+            let formData = new FormData();
+            let hasImage = false;
+
+            if (files.length > 0) {
+                for (let file of files) {
+                    if (file.type.startsWith("image/")) {
+                        if (hasImage) {
+                            alert("Only one image can be uploaded at a time.");
+                            return;
+                        }
+                        hasImage = true;
+                    }
+                    formData.append("file", file);
+                }
+
+                formData.append("message", modifiedMessage);
+                response = await fetch(hasImage ? "/chat/image" : "/chat", {
+                    method: "POST",
+                    body: formData
+                });
+
+            } else {
+                response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: modifiedMessage })
+                });
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+            }
+
+            let data = await response.json();
+            spinner.style.display = "none";
+
+            if (data.response) {
+                const aiMessageElement = document.createElement("div");
+                aiMessageElement.className = "chat-message ai";
+                aiMessageElement.innerHTML = data.response;
+                chatBox.appendChild(aiMessageElement);
+            } else {
+                throw new Error("Empty response from server.");
+            }
+
+        } catch (error) {
+            spinner.style.display = "none";
+            console.error("Error:", error);
+            const errorMessageElement = document.createElement("div");
+            errorMessageElement.className = "chat-message ai error";
+            errorMessageElement.textContent = `Error: ${error.message}`;
+            chatBox.appendChild(errorMessageElement);
         }
 
-    } catch (error) {
-        spinner.style.display = "none";
-        console.error("Error:", error);
-        const errorMessageElement = document.createElement("div");
-        errorMessageElement.className = "chat-message ai error";
-        errorMessageElement.textContent = `Error: ${error.message}`;
-        chatBox.appendChild(errorMessageElement);
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-//  Toggle Sidebar
-document.addEventListener("DOMContentLoaded", function () {
-    const toggleBtn = document.getElementById("toggleBtn");
-    const sidebar = document.querySelector(".sidebar");
-    const mainContainer = document.querySelector(".main-container");
-
-    toggleBtn.addEventListener("click", () => {
-        sidebar.classList.toggle("closed");
-        mainContainer.classList.toggle("expanded");
-        toggleBtn.textContent = sidebar.classList.contains("closed") ? "❯" : "❮";
+    // Toggle Sidebar
+    document.getElementById("toggleBtn")?.addEventListener("click", () => {
+        const sidebar = document.querySelector(".sidebar");
+        const mainContainer = document.querySelector(".main-container");
+        if (sidebar && mainContainer) {
+            sidebar.classList.toggle("closed");
+            mainContainer.classList.toggle("expanded");
+            document.getElementById("toggleBtn").textContent = sidebar.classList.contains("closed") ? "❯" : "❮";
+        }
     });
-});
 
-//  Enable Shift+Enter to Send Message
-document.addEventListener("keydown", function (event) {
-    if (event.shiftKey && event.key === "Enter") {
-        event.preventDefault();
-        sendMessage(); // Trigger message send function
-    }
-});
-//  Open File Dialog When Clicking the Upload Button
-document.getElementById("fileButton").addEventListener("click", function () {
-    document.getElementById("fileUpload").click();
+    // Enable Shift+Enter to Send Message
+    document.addEventListener("keydown", function (event) {
+        if (event.shiftKey && event.key === "Enter") {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Open File Dialog When Clicking the Upload Button
+    document.getElementById("fileButton")?.addEventListener("click", function () {
+        document.getElementById("fileUpload").click();
+    });
 });
 
  //Copy button
