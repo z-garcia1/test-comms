@@ -225,8 +225,15 @@ def format_ai_response(response):
 def chat():
     """Handles user messages & multiple file uploads, then sends them to Claude."""
 
-    user_message = request.form.get("message", "")
-    files = request.files.getlist("file")  # Allow multiple file uploads
+    if request.content_type == "application/json":
+        # Handle text-only input
+        data = request.get_json()
+        user_message = data.get("message", "")
+        files = []
+    else:
+        # Handle file uploads
+        user_message = request.form.get("message", "")
+        files = request.files.getlist("file")  # Allow multiple file uploads
 
     if not user_message and not files:
         return jsonify({"error": "No input provided"}), 400
