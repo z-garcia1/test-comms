@@ -774,11 +774,7 @@ async function sendMessage() {
     }
 
     // Construct hidden prompt prefix
-    let hiddenPrompt = "";
-    if (systemPrompt) {
-        hiddenPrompt += `System Instructions: ${systemPrompt}\n`;
-    }
-    hiddenPrompt += `Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
+    let hiddenPrompt = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
 
     // Append user message to hidden prompt
     const modifiedMessage = hiddenPrompt + userMessage;
