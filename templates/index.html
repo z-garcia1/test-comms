@@ -782,7 +782,7 @@ async function sendMessage() {
     if (userMessage.trim() !== '') {
                 const userMessageElement = document.createElement('div');
                 userMessageElement.className = 'chat-message user';
-                userMessageElement.textContent = ${userMessage};
+                userMessageElement.textContent = userMessage;
                 chatBox.appendChild(userMessageElement);
                 userInput.value = '';
     }
@@ -825,7 +825,8 @@ if (hasImage) {
 }
 
         if (!response.ok) {
-            throw new Error(HTTP Error ${response.status}: ${response.statusText});
+            throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+
         }
 
         data = await response.json();
@@ -850,7 +851,7 @@ if (hasImage) {
         console.error("Error:", error);
         const errorMessageElement = document.createElement("div");
         errorMessageElement.className = "chat-message ai error";
-        errorMessageElement.textContent = Error: ${error.message};
+        errorMessageElement.textContent = `Error: ${error.message}`;
         chatBox.appendChild(errorMessageElement);
     }
 
