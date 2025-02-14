@@ -743,33 +743,16 @@ function toggleWebSearch() {
     webSearchButton.style.color = useWeb ? "#00bfff" : "";
 }
 
-// Handle Multiple File Selections (Store but DO NOT upload immediately)
-document.getElementById('fileUpload').addEventListener('change', function(event) {
+document.getElementById('fileUpload').addEventListener('change', function () {
     const fileInfo = document.getElementById('fileInfo');
     const fileNameDisplay = document.getElementById('fileName');
 
-    if (event.target.files.length > 0) {
-        selectedFiles = Array.from(event.target.files); // Store multiple files
-        fileNameDisplay.textContent = selectedFiles.map(file => file.name).join(", ");
-        fileInfo.style.display = "block"; // Show file info section
-    } else {
-        selectedFiles = [];
-        fileInfo.style.display = "none";
-    }
-});
-
-//  Clear Selected Files
-document.getElementById('clearButton').addEventListener('click', function () {
-    document.getElementById('fileUpload').value = "";
-    document.getElementById('fileInfo').style.display = "none";
-    selectedFiles = [];
-});
-
-document.getElementById('fileUpload').addEventListener('change', () => {
-    const fileInfo = document.getElementById('fileInfo');
-    if (document.getElementById('fileUpload').files.length > 0) {
-        fileInfo.textContent = `Selected: ${document.getElementById('fileUpload').files[0].name}`;
+    if (this.files.length > 0) {
+        fileNameDisplay.textContent = Array.from(this.files).map(file => file.name).join(", ");
         fileInfo.style.display = 'block';
+    } else {
+        fileNameDisplay.textContent = "";
+        fileInfo.style.display = 'none';
     }
 });
 
@@ -844,7 +827,7 @@ async function sendMessage() {
     }
 
     chatBox.scrollTop = chatBox.scrollHeight;
-}
+};
 
 //  Toggle Sidebar
 document.addEventListener("DOMContentLoaded", function () {
