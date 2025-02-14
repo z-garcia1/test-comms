@@ -186,27 +186,25 @@ def format_ai_response(response):
     return "<br>".join(formatted_lines)
 
 def process_file(file_path, file_type):
-    """Processes the file based on its type and returns Claude-compatible content."""
-    if file_type in ["jpg", "jpeg", "png"]:
-        base64_string = convert_image_to_base64(file_path)
-        return [{"type": "image", "source": {"type": "base64", "media_type": f"image/{file_type}", "data": base64_string}}]
-    
-    elif file_type == "pdf":
-        text = extract_text_from_pdf(file_path)
-    
-    elif file_type == "docx":
-        text = extract_text_from_docx(file_path)
-    
-    elif file_type == "xlsx":
-        text = extract_text_from_xlsx(file_path)
-    
-    elif file_type == "pptx":
-        text = extract_text_from_pptx(file_path)
-    
-    else:
-        return [{"type": "text", "text": f"Unsupported file type: {file_type}"}]
+    """Processes a file and extracts its text."""
 
-    return [{"type": "text", "text": text}] if text else [{"type": "text", "text": "No readable content found in file."}]
+    if file_type == "pdf":
+        return extract_text_from_pdf(file_path)
+
+    elif file_type == "docx":
+        return extract_text_from_docx(file_path)
+
+    elif file_type == "xlsx":
+        return extract_text_from_xlsx(file_path)
+
+    elif file_type == "pptx":
+        return extract_text_from_pptx(file_path)
+
+    elif file_type in ["csv", "txt", "html", "odt", "rtf", "epub", "json"]:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read()
+
+    return "Unsupported file type."
 
 def format_ai_response(response):
     lines = response.split("\n")
@@ -223,28 +221,24 @@ def format_ai_response(response):
     return "<br>".join(formatted_lines)
 
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
-
-@app.route("/chat", methods=["POST"])
 @app.route("/chat", methods=["POST"])
 def chat():
     """Handles user messages & multiple file uploads, then sends them to Claude."""
-    user_message = request.form.get("message", "").strip()
+
+    user_message = request.form.get("message", "")
     files = request.files.getlist("file")  # Allow multiple file uploads
 
     if not user_message and not files:
         return jsonify({"error": "No input provided"}), 400
 
-    content = [{"role": "user", "content": user_message}] if user_message else []
+    content = [{"type": "text", "text": user_message}] if user_message else []
     text_from_files = []
 
     for file in files:
         file_ext = file.filename.split(".")[-1].lower()
 
         if file_ext in ["png", "jpeg", "jpg"]:
-            if len(files) > 1:
-                return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
-            ai_response = invoke_claude_with_image(file_path, file_ext, user_message)
-            return jsonify({"response": ai_response})
+            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
 
         if file_ext not in ALLOWED_EXTENSIONS:
             return jsonify({"error": f"Invalid file type: {file_ext}"}), 400
@@ -254,33 +248,70 @@ def chat():
         file.save(file_path)
 
         try:
-            text = process_file(file_path, file_ext)
+            text = process_file(file_path, file_ext)  # Extract text
             if text:
                 text_from_files.append(text)
         finally:
-            os.remove(file_path)
+            os.remove(file_path)  # Cleanup
 
     combined_text = "\n\n".join(text_from_files)
-    if len(combined_text) > 800_000:
-        combined_text = combined_text[:800_000]  # Trim to fit context window
 
-    content.append({"role": "user", "content": combined_text})
+    # Ensure text fits within Claude's context window (~200K tokens)
+    if len(combined_text) > 800_000:  # Approx. 200K tokens
+        combined_text = combined_text[:800_000]  # Trim excess text
 
+    content.append({"type": "text", "text": combined_text})
+
+    # Store user input in chat memory before invoking Claude
     chat_memory.append({"role": "user", "content": user_message})
-    ai_response = invoke_claude_bedrock(chat_memory + content)  # Send chat history
+    ai_response = invoke_claude_bedrock(content)
 
+    # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
+
     formatted_response = format_ai_response(ai_response)
+
     return jsonify({"response": f"""<br><br><div><pre>{formatted_response}</pre><button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""})
-  
+
+@app.route("/chat/image", methods=["POST"])
+def chat_with_image():
+    """Handles image-based messages."""
+    user_message = request.form.get("message", "")
+    files = request.files.getlist("file")
+
+    if not files or len(files) != 1:
+        return jsonify({"error": "Only one image can be uploaded at a time."}), 400
+
+    file = files[0]
+    file_ext = file.filename.split(".")[-1].lower()
+
+    if file_ext not in ["png", "jpeg", "jpg"]:
+        return jsonify({"error": "Invalid image format. Use PNG, JPEG, or JPG."}), 400
+
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    file.save(file_path)
+
+    try:
+        ai_response = invoke_claude_with_image(file_path, file_ext, user_message)
+    finally:
+        os.remove(file_path)  # Clean up
+
+    formatted_response = format_ai_response(ai_response)
+    return jsonify({"response": f"<br><br><div><pre>{formatted_response}</pre><button class='copy-button'><i class='fa-regular fa-copy'></i>&nbsp; Copy</button></div>"})
+
+
 ### ✅ Claude AI Invocation ###
 def invoke_claude_bedrock(content):
-    """Sends user messages or file content to Claude AI via AWS Bedrock."""
-    
+    """Sends text-based content to Claude AI via AWS Bedrock, preserving chat history."""
+
+    # Ensure chat_memory includes only past messages
+    messages = chat_memory + [{"role": "user", "content": content}]
+
     payload = {
-    "anthropic_version": "bedrock-2023-05-31",
-    "max_tokens": 4000,
-    "messages": chat_memory if not any(item.get("type") == "text" for item in content) else [{"role": "user", "content": content}]
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 4000,
+        "messages": messages  # Include full chat history
     }
 
     response = bedrock.invoke_model(
@@ -293,13 +324,13 @@ def invoke_claude_bedrock(content):
     response_body = response["body"].read().decode("utf-8")
     result = json.loads(response_body)
 
-    # Extract only text responses
     if "content" in result and isinstance(result["content"], list):
         extracted_text = "\n".join(item["text"] for item in result["content"] if item["type"] == "text")
     else:
-        extracted_text = "No valid response from Claude"
+        extracted_text = "No valid response from Claude."
 
     return extracted_text
+
 
 def invoke_claude_with_image(file_path, file_ext, user_message):
     """Handles image-based requests to Claude 3.5 Sonnet."""
