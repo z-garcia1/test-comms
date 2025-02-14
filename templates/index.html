@@ -733,6 +733,7 @@
     </div>
 </div>
 <script>
+   <script>
    let selectedFiles = []; // Store selected files
     let useWeb = false; // Track web search status
 
@@ -762,7 +763,7 @@ async function sendMessage() {
     const userMessage = userInput.value.trim();
     const files = document.getElementById('fileUpload').files;
 
-    // Retrieve system prompt and advanced settings
+    // Capture advanced settings
     const systemPrompt = document.getElementById("systemPrompt").value.trim();
     const temperature = document.getElementById("temperature").value;
     const topP = document.getElementById("topP").value;
@@ -773,25 +774,19 @@ async function sendMessage() {
         return;
     }
 
-    // Construct the modified prompt with advanced settings included
-    let modifiedMessage = `System Instructions: ${systemPrompt}\n`;
-    modifiedMessage += `Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
-    modifiedMessage += userMessage;
+    // Construct hidden prompt prefix
+    let hiddenPrompt = System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n;
 
-    // Display user message in chat
-    if (userMessage) {
-        const userMessageElement = document.createElement('div');
-        userMessageElement.className = 'chat-message user';
-        userMessageElement.textContent = userMessage;
-        chatBox.appendChild(userMessageElement);
+    // Append user message to hidden prompt
+    const modifiedMessage = hiddenPrompt + userMessage;
+ // Display user message
+    if (userMessage.trim() !== '') {
+                const userMessageElement = document.createElement('div');
+                userMessageElement.className = 'chat-message user';
+                userMessageElement.textContent = ${userMessage};
+                chatBox.appendChild(userMessageElement);
+                userInput.value = '';
     }
-
-    // Clear input fields
-    userInput.value = '';
-    document.getElementById('fileUpload').value = "";
-    document.getElementById('fileInfo').style.display = "none";
-
-    // Loading spinner
     const spinner = document.createElement("div");
     spinner.className = "spinner";
     chatBox.appendChild(spinner);
@@ -803,9 +798,8 @@ async function sendMessage() {
 
         if (files.length > 0) {
             const formData = new FormData();
-            formData.append("message", modifiedMessage); // Send the modified prompt
+            formData.append("message", modifiedMessage); // Use modified message
 
-            // Attach multiple files to FormData
             for (let file of files) {
                 formData.append("file", file);
             }
@@ -818,15 +812,20 @@ async function sendMessage() {
             response = await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: modifiedMessage }) // Send modified message
+                body: JSON.stringify({ message: modifiedMessage }) // Use modified message
             });
         }
 
         if (!response.ok) {
-            throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+            throw new Error(HTTP Error ${response.status}: ${response.statusText});
         }
 
         data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
         spinner.style.display = "none";
 
         if (data.response) {
@@ -843,12 +842,12 @@ async function sendMessage() {
         console.error("Error:", error);
         const errorMessageElement = document.createElement("div");
         errorMessageElement.className = "chat-message ai error";
-        errorMessageElement.textContent = `Error: ${error.message}`;
+        errorMessageElement.textContent = Error: ${error.message};
         chatBox.appendChild(errorMessageElement);
     }
 
     chatBox.scrollTop = chatBox.scrollHeight;
-}
+    }
 
 //  Toggle Sidebar
 document.addEventListener("DOMContentLoaded", function () {
