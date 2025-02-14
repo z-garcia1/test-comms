@@ -226,27 +226,18 @@ def format_ai_response(response):
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Handles user messages & file uploads, then sends them to Claude."""
-
+    """Handles user messages & a single file upload, then sends them to Claude."""
+  
     if request.content_type == "application/json":
         data = request.get_json()
         user_message = data.get("message", "")
-        system_prompt = data.get("systemPrompt", "")
-        temperature = data.get("temperature", 0.7)
-        top_p = data.get("topP", 0.9)
-        top_k = data.get("topK", 50)
         file = None  # No file in JSON requests
     else:
         user_message = request.form.get("message", "")
-        system_prompt = request.form.get("systemPrompt", "")
-        temperature = float(request.form.get("temperature", 0.7))
-        top_p = float(request.form.get("topP", 0.9))
-        top_k = int(request.form.get("topK", 50))
-        file = request.files.get("file")
+        file = request.files.get("file")  # Expecting only one file
 
     if not user_message and not file:
         return jsonify({"error": "No input provided"}), 400
-
     content = [{"type": "text", "text": user_message}] if user_message else []
 
     if file:
@@ -260,41 +251,38 @@ def chat():
 
         try:
             if file_ext in ["png", "jpeg", "jpg"]:
-                ai_response = invoke_claude_with_image(file_path, file_ext, user_message, system_prompt, temperature, top_p, top_k)
+                # If the file is an image, use the separate image invocation function
+                ai_response = invoke_claude_with_image(file_path, file_ext, user_message)
             else:
+                # Use your original text-based file processing logic
                 content.extend(process_file(file_path, file_ext))
-                ai_response = invoke_claude_bedrock(content, system_prompt, temperature, top_p, top_k)
+                ai_response = invoke_claude_bedrock(content)
+
         finally:
-            os.remove(file_path)
+            os.remove(file_path)  # Cleanup after processing
 
     else:
-        ai_response = invoke_claude_bedrock(content, system_prompt, temperature, top_p, top_k)
-
+        # If no file is uploaded, proceed with normal text invocation
+        ai_response = invoke_claude_bedrock(content)
+              
     chat_memory.append({"role": "user", "content": user_message})
     formatted_response = format_ai_response(ai_response)
     chat_memory.append({"role": "assistant", "content": ai_response})
 
     return jsonify({"response": f"""<br><br><div><pre>{formatted_response}</pre><button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""})
+  
 ### ✅ Claude AI Invocation ###
-def invoke_claude_bedrock(content, system_prompt, temperature, top_p, top_k):
+def invoke_claude_bedrock(content):
     """Sends user messages or file content to Claude AI via AWS Bedrock."""
-
+    
     payload = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 4000,
-        "messages": [
-            {"role": "system", "content": system_prompt}
-        ] + chat_memory if not any(item.get("type") == "text" for item in content) else [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": content}
-        ],
-        "temperature": temperature,
-        "top_p": top_p,
-        "top_k": top_k
+    "anthropic_version": "bedrock-2023-05-31",
+    "max_tokens": 4000,
+    "messages": chat_memory if not any(item.get("type") == "text" for item in content) else [{"role": "user", "content": content}]
     }
 
     response = bedrock.invoke_model(
-        modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
         contentType="application/json",
         accept="application/json",
         body=json.dumps(payload)
@@ -303,10 +291,11 @@ def invoke_claude_bedrock(content, system_prompt, temperature, top_p, top_k):
     response_body = response["body"].read().decode("utf-8")
     result = json.loads(response_body)
 
+    # Extract only text responses
     if "content" in result and isinstance(result["content"], list):
         extracted_text = "\n".join(item["text"] for item in result["content"] if item["type"] == "text")
     else:
-        extracted_text = "No valid response from Claude."
+        extracted_text = "No valid response from Claude"
 
     return extracted_text
 
@@ -380,5 +369,3 @@ def safe_search(query):
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
     app.run()
-
-
