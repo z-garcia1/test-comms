@@ -110,6 +110,29 @@ def logout():
 def acknowledge():
     return render_template("index.html")
 
+from PIL import Image
+import io
+
+def resize_image(file_path, max_size=512):
+    """Resizes an image before encoding to Base64 to avoid large payloads."""
+    try:
+        with Image.open(file_path) as img:
+            original_size = img.size  # Store original size for debugging
+            img.thumbnail((max_size, max_size))  # Resize while maintaining aspect ratio
+
+            # Save resized image to memory
+            img_buffer = io.BytesIO()
+            img.save(img_buffer, format=img.format)
+            img_buffer.seek(0)
+
+            # Overwrite original file with resized version
+            with open(file_path, "wb") as f:
+                f.write(img_buffer.getvalue())
+
+            print(f"Resized image from {original_size} to {img.size}")
+    except Exception as e:
+        print(f"Error resizing image: {e}")
+
 ### ✅ File Processing Functions ###
 def convert_image_to_base64(file_path):
     """Converts an image file to a Base64 string."""
@@ -278,7 +301,9 @@ def invoke_claude_bedrock(content):
 
 def invoke_claude_with_image(file_path, file_ext, user_message):
     """Handles image-based requests to Claude 3.5 Sonnet."""
-    
+
+    resize_image(file_path, max_size=512)
+  
     with open(file_path, "rb") as file:
         base64_string = base64.b64encode(file.read()).decode("utf-8")
 
