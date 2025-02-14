@@ -530,6 +530,8 @@
     font-size: 14px;
     color: #555;  /* Ensures arrow visibility */
     margin-left: auto;  /* Push to the right */
+    display: inline-block;
+    transform: rotate(90deg);
 }
 
 .select-trigger span {
@@ -633,7 +635,7 @@
         <div class="select-container">
             <button class="select-trigger" id="writingStyle-trigger">
                 <span>Default</span>
-                <span class="dropdown-arrow">▼</span> <!-- Dropdown arrow -->
+                <span class="dropdown-arrow">❮</span> <!-- Dropdown arrow -->
             </button>
             <div class="custom-dropdown" id="writingStyle-dropdown">
                 <div class="options-list" id="writingStyle-options">
