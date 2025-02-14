@@ -762,11 +762,34 @@ async function sendMessage() {
     const userMessage = userInput.value.trim();
     const files = document.getElementById('fileUpload').files;
 
+    // Capture advanced settings
+    const systemPrompt = document.getElementById("systemPrompt").value.trim();
+    const temperature = document.getElementById("temperature").value;
+    const topP = document.getElementById("topP").value;
+    const topK = document.getElementById("topK").value;
+
     if (userMessage === "" && files.length === 0) {
         alert("Please enter a message or upload at least one file.");
         return;
     }
 
+    // Construct hidden prompt prefix
+    let hiddenPrompt = "";
+    if (systemPrompt) {
+        hiddenPrompt += `System Instructions: ${systemPrompt}\n`;
+    }
+    hiddenPrompt += `Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
+
+    // Append user message to hidden prompt
+    const modifiedMessage = hiddenPrompt + userMessage;
+ // Display user message
+    if (userMessage.trim() !== '') {
+                const userMessageElement = document.createElement('div');
+                userMessageElement.className = 'chat-message user';
+                userMessageElement.textContent = `${userMessage}`;
+                chatBox.appendChild(userMessageElement);
+                userInput.value = '';
+    
     const spinner = document.createElement("div");
     spinner.className = "spinner";
     chatBox.appendChild(spinner);
@@ -778,7 +801,7 @@ async function sendMessage() {
 
         if (files.length > 0) {
             const formData = new FormData();
-            if (userMessage) formData.append("message", userMessage);
+            formData.append("message", modifiedMessage); // Use modified message
 
             for (let file of files) {
                 formData.append("file", file);
@@ -792,7 +815,7 @@ async function sendMessage() {
             response = await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: userMessage })
+                body: JSON.stringify({ message: modifiedMessage }) // Use modified message
             });
         }
 
@@ -827,7 +850,7 @@ async function sendMessage() {
     }
 
     chatBox.scrollTop = chatBox.scrollHeight;
-};
+    }
 
 //  Toggle Sidebar
 document.addEventListener("DOMContentLoaded", function () {
