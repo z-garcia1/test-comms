@@ -779,6 +779,12 @@ async function sendMessage() {
     const userMessage = userInput.value.trim();
     const file = document.getElementById('fileUpload').files[0];
 
+    // Fetch advanced settings
+    const systemPrompt = document.getElementById('systemPrompt').value.trim();
+    const temperature = parseFloat(document.getElementById('temperature').value);
+    const topP = parseFloat(document.getElementById('topP').value);
+    const topK = parseInt(document.getElementById('topK').value, 10);
+
     if (userMessage === "" && !file) {
         alert("Please enter a message or upload a file before sending.");
         return;
@@ -791,20 +797,17 @@ async function sendMessage() {
         userMessageElement.textContent = userMessage;
         chatBox.appendChild(userMessageElement);
     }
-    //remove input
+
     userInput.value = '';
     document.getElementById('fileUpload').value = "";
     document.getElementById('fileInfo').style.display = "none";
-    
-    // Loading spinner
+
     const spinner = document.createElement("div");
     spinner.className = "spinner";
-    spinner.style.display = 'block';
     chatBox.appendChild(spinner);
 
-    // Scroll to the bottom
     chatBox.scrollTop = chatBox.scrollHeight;
-    
+
     try {
         let response;
         let data;
@@ -812,7 +815,11 @@ async function sendMessage() {
         if (file) {
             const formData = new FormData();
             if (userMessage) formData.append("message", userMessage);
-            formData.append("file", file);  // Single file upload
+            formData.append("file", file);
+            formData.append("systemPrompt", systemPrompt);
+            formData.append("temperature", temperature);
+            formData.append("topP", topP);
+            formData.append("topK", topK);
 
             response = await fetch("/chat", {
                 method: "POST",
@@ -822,7 +829,13 @@ async function sendMessage() {
             response = await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: userMessage })
+                body: JSON.stringify({
+                    message: userMessage,
+                    systemPrompt,
+                    temperature,
+                    topP,
+                    topK
+                })
             });
         }
 
@@ -846,7 +859,7 @@ async function sendMessage() {
         errorMessageElement.textContent = `Error: ${error.message}`;
         chatBox.appendChild(errorMessageElement);
     }
-    // Scroll to the bottom
+
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
