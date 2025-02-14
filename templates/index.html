@@ -730,24 +730,7 @@
     </div>
 </div>
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    let selectedFiles = []; // Store selected files
-    let useWeb = false; // Track web search status
-
-    document.getElementById('fileUpload')?.addEventListener('change', function () {
-        const fileInfo = document.getElementById('fileInfo');
-        const fileNameDisplay = document.getElementById('fileName');
-
-        if (this.files.length > 0) {
-            fileNameDisplay.textContent = Array.from(this.files).map(file => file.name).join(", ");
-            fileInfo.style.display = 'block';
-        } else {
-            fileNameDisplay.textContent = "";
-            fileInfo.style.display = 'none';
-        }
-    });
-
-    async function sendMessage() {
+  async function sendMessage() {
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
     const userMessage = userInput.value.trim();
@@ -844,6 +827,23 @@
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+document.addEventListener("DOMContentLoaded", function () {
+    let selectedFiles = []; // Store selected files
+    let useWeb = false; // Track web search status
+
+    document.getElementById('fileUpload')?.addEventListener('change', function () {
+        const fileInfo = document.getElementById('fileInfo');
+        const fileNameDisplay = document.getElementById('fileName');
+
+        if (this.files.length > 0) {
+            fileNameDisplay.textContent = Array.from(this.files).map(file => file.name).join(", ");
+            fileInfo.style.display = 'block';
+        } else {
+            fileNameDisplay.textContent = "";
+            fileInfo.style.display = 'none';
+        }
+    });
+    
     // Toggle Sidebar
     document.getElementById("toggleBtn")?.addEventListener("click", () => {
         const sidebar = document.querySelector(".sidebar");
