@@ -223,9 +223,14 @@ def format_ai_response(response):
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Handles user messages & multiple file uploads, then sends them to Claude."""
+    """Handles user messages & file uploads, allowing text-only requests as well."""
 
-    user_message = request.form.get("message", "")
+    # Check if the request contains JSON or form data
+    if request.is_json:
+        user_message = request.json.get("message", "").strip()
+    else:
+        user_message = request.form.get("message", "").strip()
+
     files = request.files.getlist("file")  # Allow multiple file uploads
 
     if not user_message and not files:
@@ -237,8 +242,28 @@ def chat():
     for file in files:
         file_ext = file.filename.split(".")[-1].lower()
 
+        # Ensure only one image file is uploaded at a time
         if file_ext in ["png", "jpeg", "jpg"]:
-            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+            if len(files) > 1:
+                return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(file_path)
+
+            try:
+                # Convert image to Base64 for AI processing
+                image_base64 = convert_image_to_base64(file_path)
+                content.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": f"image/{file_ext}",
+                        "data": image_base64
+                    }
+                })
+            finally:
+                os.remove(file_path)  # Cleanup image
+            continue  # Skip text processing for images
 
         if file_ext not in ALLOWED_EXTENSIONS:
             return jsonify({"error": f"Invalid file type: {file_ext}"}), 400
@@ -248,30 +273,39 @@ def chat():
         file.save(file_path)
 
         try:
-            text = process_file(file_path, file_ext)  # Extract text
+            # Extract text from supported document types
+            text = process_file(file_path, file_ext)
             if text:
                 text_from_files.append(text)
         finally:
-            os.remove(file_path)  # Cleanup
+            os.remove(file_path)  # Cleanup document
 
+    # Combine extracted text from all documents
     combined_text = "\n\n".join(text_from_files)
 
     # Ensure text fits within Claude's context window (~200K tokens)
     if len(combined_text) > 800_000:  # Approx. 200K tokens
         combined_text = combined_text[:800_000]  # Trim excess text
 
-    content.append({"type": "text", "text": combined_text})
+    if combined_text:
+        content.append({"type": "text", "text": combined_text})
 
     # Store user input in chat memory before invoking Claude
     chat_memory.append({"role": "user", "content": user_message})
+
+    # Invoke Claude AI for processing
     ai_response = invoke_claude_bedrock(content)
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
 
+    # Format the response for display
     formatted_response = format_ai_response(ai_response)
 
-    return jsonify({"response": f"""<br><br><div><pre>{formatted_response}</pre><button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""})
+    return jsonify({
+        "response": f"""<br><br><div><pre>{formatted_response}</pre>
+                        <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
+    })
 
 @app.route("/chat/image", methods=["POST"])
 def chat_with_image():
