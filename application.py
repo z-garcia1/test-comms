@@ -186,25 +186,27 @@ def format_ai_response(response):
     return "<br>".join(formatted_lines)
 
 def process_file(file_path, file_type):
-    """Processes a file and extracts its text."""
-
-    if file_type == "pdf":
-        return extract_text_from_pdf(file_path)
-
+    """Processes the file based on its type and returns Claude-compatible content."""
+    if file_type in ["jpg", "jpeg", "png"]:
+        base64_string = convert_image_to_base64(file_path)
+        return [{"type": "image", "source": {"type": "base64", "media_type": f"image/{file_type}", "data": base64_string}}]
+    
+    elif file_type == "pdf":
+        text = extract_text_from_pdf(file_path)
+    
     elif file_type == "docx":
-        return extract_text_from_docx(file_path)
-
+        text = extract_text_from_docx(file_path)
+    
     elif file_type == "xlsx":
-        return extract_text_from_xlsx(file_path)
-
+        text = extract_text_from_xlsx(file_path)
+    
     elif file_type == "pptx":
-        return extract_text_from_pptx(file_path)
+        text = extract_text_from_pptx(file_path)
+    
+    else:
+        return [{"type": "text", "text": f"Unsupported file type: {file_type}"}]
 
-    elif file_type in ["csv", "txt", "html", "odt", "rtf", "epub", "json"]:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return f.read()
-
-    return "Unsupported file type."
+    return [{"type": "text", "text": text}] if text else [{"type": "text", "text": "No readable content found in file."}]
 
 def format_ai_response(response):
     lines = response.split("\n")
@@ -221,69 +223,62 @@ def format_ai_response(response):
     return "<br>".join(formatted_lines)
 
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
+
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Handles user messages & multiple file uploads, then sends them to Claude."""
+    """Handles user messages & a single file upload, then sends them to Claude."""
+  
+    if request.content_type == "application/json":
+        data = request.get_json()
+        user_message = data.get("message", "")
+        file = None  # No file in JSON requests
+    else:
+        user_message = request.form.get("message", "")
+        file = request.files.get("file")  # Expecting only one file
 
-    user_message = request.form.get("message", "")
-    files = request.files.getlist("file")  # Allow multiple file uploads
-
-    if not user_message and not files:
+    if not user_message and not file:
         return jsonify({"error": "No input provided"}), 400
-
     content = [{"type": "text", "text": user_message}] if user_message else []
-    text_from_files = []
 
-    for file in files:
+    if file:
         file_ext = file.filename.split(".")[-1].lower()
-
-        if file_ext in ["png", "jpeg", "jpg"]:
-            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
-
         if file_ext not in ALLOWED_EXTENSIONS:
-            return jsonify({"error": f"Invalid file type: {file_ext}"}), 400
+            return jsonify({"error": "Invalid file type"}), 400
 
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(file_path)
 
         try:
-            text = process_file(file_path, file_ext)  # Extract text
-            if text:
-                text_from_files.append(text)
+            if file_ext in ["png", "jpeg", "jpg"]:
+                # If the file is an image, use the separate image invocation function
+                ai_response = invoke_claude_with_image(file_path, file_ext, user_message)
+            else:
+                # Use your original text-based file processing logic
+                content.extend(process_file(file_path, file_ext))
+                ai_response = invoke_claude_bedrock(content)
+
         finally:
-            os.remove(file_path)  # Cleanup
+            os.remove(file_path)  # Cleanup after processing
 
-    combined_text = "\n\n".join(text_from_files)
-
-    # Ensure text fits within Claude's context window (~200K tokens)
-    if len(combined_text) > 800_000:  # Approx. 200K tokens
-        combined_text = combined_text[:800_000]  # Trim excess text
-
-    content.append({"type": "text", "text": combined_text})
-
-    # Store user input in chat memory before invoking Claude
+    else:
+        # If no file is uploaded, proceed with normal text invocation
+        ai_response = invoke_claude_bedrock(content)
+              
     chat_memory.append({"role": "user", "content": user_message})
-    ai_response = invoke_claude_bedrock(content)
-
-    # Store AI response in chat memory
+    formatted_response = format_ai_response(ai_response)
     chat_memory.append({"role": "assistant", "content": ai_response})
 
-    formatted_response = format_ai_response(ai_response)
-
     return jsonify({"response": f"""<br><br><div><pre>{formatted_response}</pre><button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""})
-
+  
 ### ✅ Claude AI Invocation ###
 def invoke_claude_bedrock(content):
-    """Sends text-based content to Claude AI via AWS Bedrock, preserving chat history."""
-
-    # Ensure chat_memory includes only past messages
-    messages = chat_memory + [{"role": "user", "content": content}]
-
+    """Sends user messages or file content to Claude AI via AWS Bedrock."""
+    
     payload = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 4000,
-        "messages": messages  # Include full chat history
+    "anthropic_version": "bedrock-2023-05-31",
+    "max_tokens": 4000,
+    "messages": chat_memory if not any(item.get("type") == "text" for item in content) else [{"role": "user", "content": content}]
     }
 
     response = bedrock.invoke_model(
@@ -296,13 +291,13 @@ def invoke_claude_bedrock(content):
     response_body = response["body"].read().decode("utf-8")
     result = json.loads(response_body)
 
+    # Extract only text responses
     if "content" in result and isinstance(result["content"], list):
         extracted_text = "\n".join(item["text"] for item in result["content"] if item["type"] == "text")
     else:
-        extracted_text = "No valid response from Claude."
+        extracted_text = "No valid response from Claude"
 
     return extracted_text
-
 
 def invoke_claude_with_image(file_path, file_ext, user_message):
     """Handles image-based requests to Claude 3.5 Sonnet."""
