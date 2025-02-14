@@ -762,7 +762,7 @@ async function sendMessage() {
     const userMessage = userInput.value.trim();
     const files = document.getElementById('fileUpload').files;
 
-    // Capture advanced settings
+    // Retrieve system prompt and advanced settings
     const systemPrompt = document.getElementById("systemPrompt").value.trim();
     const temperature = document.getElementById("temperature").value;
     const topP = document.getElementById("topP").value;
@@ -773,19 +773,25 @@ async function sendMessage() {
         return;
     }
 
-    let hiddenPrompt = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
-    const modifiedMessage = hiddenPrompt + userMessage;
+    // Construct the modified prompt with advanced settings included
+    let modifiedMessage = `System Instructions: ${systemPrompt}\n`;
+    modifiedMessage += `Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
+    modifiedMessage += userMessage;
 
-    // Display user message in chatbox before sending
-    if (userMessage.trim() !== '') {
+    // Display user message in chat
+    if (userMessage) {
         const userMessageElement = document.createElement('div');
         userMessageElement.className = 'chat-message user';
         userMessageElement.textContent = userMessage;
         chatBox.appendChild(userMessageElement);
-        userInput.value = ''; // Clear input field after displaying message
     }
 
-    // Show loading spinner
+    // Clear input fields
+    userInput.value = '';
+    document.getElementById('fileUpload').value = "";
+    document.getElementById('fileInfo').style.display = "none";
+
+    // Loading spinner
     const spinner = document.createElement("div");
     spinner.className = "spinner";
     chatBox.appendChild(spinner);
@@ -793,28 +799,34 @@ async function sendMessage() {
 
     try {
         let response;
-        let formData = new FormData();
+        let data;
 
-        formData.append("message", modifiedMessage);
-        for (let file of files) {
-            formData.append("file", file);
+        if (files.length > 0) {
+            const formData = new FormData();
+            formData.append("message", modifiedMessage); // Send the modified prompt
+
+            // Attach multiple files to FormData
+            for (let file of files) {
+                formData.append("file", file);
+            }
+
+            response = await fetch("/chat", {
+                method: "POST",
+                body: formData
+            });
+        } else {
+            response = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: modifiedMessage }) // Send modified message
+            });
         }
-
-        response = await fetch("/chat", {
-            method: "POST",
-            body: formData  // Always use FormData
-        });
 
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
 
-        let data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error);
-        }
-
+        data = await response.json();
         spinner.style.display = "none";
 
         if (data.response) {
