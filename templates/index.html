@@ -712,7 +712,7 @@
             <!--    <span class="tooltip">Search the web</span> -->
            <!-- </button> -->
             <!--</div>-->
-            <input type="file" id="fileUpload" accept=".pdf, .docx, .xlsx, .pptx, .png, .jpg, .jpeg"/>
+            <input type="file" id="fileUpload" multiple accept=".pdf, .docx, .xlsx, .pptx, .png, .jpg, .jpeg"/>
             <div class="tooltip-container">
             <button class="file" id="fileButton"><i class="fa-solid fa-paperclip"></i>
                 <span class="tooltip">Upload files</span>
@@ -777,49 +777,29 @@ async function sendMessage() {
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
     const userMessage = userInput.value.trim();
-    const file = document.getElementById('fileUpload').files[0];
+    const files = document.getElementById('fileUpload').files;
 
-    // Fetch advanced settings
-    const systemPrompt = document.getElementById('systemPrompt').value.trim();
-    const temperature = parseFloat(document.getElementById('temperature').value);
-    const topP = parseFloat(document.getElementById('topP').value);
-    const topK = parseInt(document.getElementById('topK').value, 10);
-
-    if (userMessage === "" && !file) {
-        alert("Please enter a message or upload a file before sending.");
+    if (userMessage === "" && files.length === 0) {
+        alert("Please enter a message or upload at least one file.");
         return;
     }
-
-    // Display user message
-    if (userMessage) {
-        const userMessageElement = document.createElement('div');
-        userMessageElement.className = 'chat-message user';
-        userMessageElement.textContent = userMessage;
-        chatBox.appendChild(userMessageElement);
-    }
-
-    userInput.value = '';
-    document.getElementById('fileUpload').value = "";
-    document.getElementById('fileInfo').style.display = "none";
 
     const spinner = document.createElement("div");
     spinner.className = "spinner";
     chatBox.appendChild(spinner);
-
     chatBox.scrollTop = chatBox.scrollHeight;
 
     try {
         let response;
         let data;
 
-        if (file) {
+        if (files.length > 0) {
             const formData = new FormData();
             if (userMessage) formData.append("message", userMessage);
-            formData.append("file", file);
-            formData.append("systemPrompt", systemPrompt);
-            formData.append("temperature", temperature);
-            formData.append("topP", topP);
-            formData.append("topK", topK);
+
+            for (let file of files) {
+                formData.append("file", file);
+            }
 
             response = await fetch("/chat", {
                 method: "POST",
@@ -829,17 +809,20 @@ async function sendMessage() {
             response = await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    message: userMessage,
-                    systemPrompt,
-                    temperature,
-                    topP,
-                    topK
-                })
+                body: JSON.stringify({ message: userMessage })
             });
         }
 
+        if (!response.ok) {
+            throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+        }
+
         data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
         spinner.style.display = "none";
 
         if (data.response) {
