@@ -294,7 +294,7 @@ def invoke_claude_bedrock(content, system_prompt, temperature, top_p, top_k):
     }
 
     response = bedrock.invoke_model(
-        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
         contentType="application/json",
         accept="application/json",
         body=json.dumps(payload)
