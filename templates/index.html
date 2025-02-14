@@ -755,8 +755,8 @@
     const chatBox = document.getElementById('chat-box');
     const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
-    const file = fileInput.files[0];
-
+    const files = fileInput.files;
+    
     // Capture advanced AI settings
     const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
     const temperature = document.getElementById("temperature")?.value || "0.7";
@@ -798,10 +798,13 @@
         let response;
         let data;
 
-        if (file) {
+        if (files.length > 0) {
             const formData = new FormData();
-            formData.append("message", modifiedMessage); // Send modified message with AI settings
-            formData.append("file", file); // Single file upload
+            formData.append("message", modifiedMessage);  // Include user message
+
+            for (let file of files) {
+                formData.append("file", file);  // Append each file to FormData
+            }
 
             response = await fetch("/chat", {
                 method: "POST",
