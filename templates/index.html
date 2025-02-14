@@ -797,24 +797,33 @@ async function sendMessage() {
         let data;
 
         if (files.length > 0) {
-            const formData = new FormData();
-            formData.append("message", modifiedMessage); // Use modified message
+            let hasImage = false;
+const formData = new FormData();
+formData.append("message", modifiedMessage); // Use modified message
 
-            for (let file of files) {
-                formData.append("file", file);
-            }
-
-            response = await fetch("/chat", {
-                method: "POST",
-                body: formData
-            });
-        } else {
-            response = await fetch("/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: modifiedMessage }) // Use modified message
-            });
+for (let file of files) {
+    const fileType = file.type.split("/")[0]; // Check if it's an image
+    if (fileType === "image") {
+        if (hasImage) {
+            alert("Only one image can be uploaded at a time.");
+            return;
         }
+        hasImage = true;
+    }
+    formData.append("file", file);
+}
+
+if (hasImage) {
+    response = await fetch("/chat/image", { // New endpoint for image processing
+        method: "POST",
+        body: formData
+    });
+} else {
+    response = await fetch("/chat", { // Normal text and file chat
+        method: "POST",
+        body: formData
+    });
+}
 
         if (!response.ok) {
             throw new Error(HTTP Error ${response.status}: ${response.statusText});
