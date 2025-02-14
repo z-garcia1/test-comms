@@ -238,15 +238,7 @@ def chat():
         file_ext = file.filename.split(".")[-1].lower()
 
         if file_ext in ["png", "jpeg", "jpg"]:
-            if len(files) > 1:
-                return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(file_path)
-
-            ai_response = invoke_claude_with_image(file_path, file_ext, user_message)
-            os.remove(file_path)  # Cleanup
-            return jsonify({"response": ai_response})
+            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
 
         if file_ext not in ALLOWED_EXTENSIONS:
             return jsonify({"error": f"Invalid file type: {file_ext}"}), 400
@@ -263,10 +255,18 @@ def chat():
             os.remove(file_path)  # Cleanup
 
     combined_text = "\n\n".join(text_from_files)
+
+    # Ensure text fits within Claude's context window (~200K tokens)
+    if len(combined_text) > 800_000:  # Approx. 200K tokens
+        combined_text = combined_text[:800_000]  # Trim excess text
+
     content.append({"type": "text", "text": combined_text})
 
+    # Store user input in chat memory before invoking Claude
     chat_memory.append({"role": "user", "content": user_message})
     ai_response = invoke_claude_bedrock(content)
+
+    # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
 
     formatted_response = format_ai_response(ai_response)
