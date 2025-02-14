@@ -228,26 +228,21 @@ def chat():
 
         try:
             if file_ext in ["png", "jpeg", "jpg"]:
-                # Use image-specific logic for Claude 3.5 Sonnet
-                base64_string = convert_image_to_base64(file_path)
-                content.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": f"image/{file_ext}",
-                        "data": base64_string
-                    }
-                })
+                # If the file is an image, use the separate image invocation function
+                ai_response = invoke_claude_with_image(file_path, file_ext, user_message)
             else:
-                # Use existing logic for text-based files
+                # Use your original text-based file processing logic
                 content.extend(process_file(file_path, file_ext))
+                ai_response = invoke_claude_bedrock(content)
 
         finally:
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            os.remove(file_path)  # Cleanup after processing
+
+    else:
+        # If no file is uploaded, proceed with normal text invocation
+        ai_response = invoke_claude_bedrock(content)
               
     chat_memory.append({"role": "user", "content": user_message})
-    ai_response = invoke_claude_bedrock(content)
     formatted_response = format_ai_response(ai_response)
     chat_memory.append({"role": "assistant", "content": ai_response})
 
@@ -280,6 +275,54 @@ def invoke_claude_bedrock(content):
         extracted_text = "No valid response from Claude"
 
     return extracted_text
+
+def invoke_claude_with_image(file_path, file_ext, user_message):
+    """Handles image-based requests to Claude 3.5 Sonnet."""
+    
+    with open(file_path, "rb") as file:
+        base64_string = base64.b64encode(file.read()).decode("utf-8")
+
+    payload = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 1024,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": f"image/{file_ext}",
+                            "data": base64_string
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": user_message if user_message else "Analyze this image."
+                    }
+                ]
+            }
+        ]
+    }
+
+    response = bedrock.invoke_model(
+        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps(payload)
+    )
+
+    response_body = response["body"].read().decode("utf-8")
+    result = json.loads(response_body)
+
+    if "content" in result and isinstance(result["content"], list):
+        extracted_text = "\n".join(item["text"] for item in result["content"] if item["type"] == "text")
+    else:
+        extracted_text = "No valid response from Claude."
+
+    return extracted_text
+
 
 ### ✅ Web Search Setup ###
 rate_limiter = InMemoryRateLimiter(requests_per_second=0.2, check_every_n_seconds=0.1)
