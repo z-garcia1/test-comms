@@ -113,7 +113,7 @@ def acknowledge():
 from PIL import Image
 import io
 
-def resize_image(file_path, max_size=512):
+def resize_image(file_path, max_size=380):
     """Resizes an image before encoding to Base64 to avoid large payloads."""
     try:
         with Image.open(file_path) as img:
@@ -302,7 +302,7 @@ def invoke_claude_bedrock(content):
 def invoke_claude_with_image(file_path, file_ext, user_message):
     """Handles image-based requests to Claude 3.5 Sonnet."""
 
-    resize_image(file_path, max_size=512)
+    resize_image(file_path, max_size=380)
   
     with open(file_path, "rb") as file:
         base64_string = base64.b64encode(file.read()).decode("utf-8")
