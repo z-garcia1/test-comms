@@ -225,50 +225,52 @@ def format_ai_response(response):
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
 
 @app.route("/chat", methods=["POST"])
+@app.route("/chat", methods=["POST"])
 def chat():
-    """Handles user messages & a single file upload, then sends them to Claude."""
-  
-    if request.content_type == "application/json":
-        data = request.get_json()
-        user_message = data.get("message", "")
-        file = None  # No file in JSON requests
-    else:
-        user_message = request.form.get("message", "")
-        file = request.files.get("file")  # Expecting only one file
+    """Handles user messages & multiple file uploads, then sends them to Claude."""
+    user_message = request.form.get("message", "").strip()
+    files = request.files.getlist("file")  # Allow multiple file uploads
 
-    if not user_message and not file:
+    if not user_message and not files:
         return jsonify({"error": "No input provided"}), 400
-    content = [{"type": "text", "text": user_message}] if user_message else []
 
-    if file:
+    content = [{"role": "user", "content": user_message}] if user_message else []
+    text_from_files = []
+
+    for file in files:
         file_ext = file.filename.split(".")[-1].lower()
+
+        if file_ext in ["png", "jpeg", "jpg"]:
+            if len(files) > 1:
+                return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+            ai_response = invoke_claude_with_image(file_path, file_ext, user_message)
+            return jsonify({"response": ai_response})
+
         if file_ext not in ALLOWED_EXTENSIONS:
-            return jsonify({"error": "Invalid file type"}), 400
+            return jsonify({"error": f"Invalid file type: {file_ext}"}), 400
 
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(file_path)
 
         try:
-            if file_ext in ["png", "jpeg", "jpg"]:
-                # If the file is an image, use the separate image invocation function
-                ai_response = invoke_claude_with_image(file_path, file_ext, user_message)
-            else:
-                # Use your original text-based file processing logic
-                content.extend(process_file(file_path, file_ext))
-                ai_response = invoke_claude_bedrock(content)
-
+            text = process_file(file_path, file_ext)
+            if text:
+                text_from_files.append(text)
         finally:
-            os.remove(file_path)  # Cleanup after processing
+            os.remove(file_path)
 
-    else:
-        # If no file is uploaded, proceed with normal text invocation
-        ai_response = invoke_claude_bedrock(content)
-              
+    combined_text = "\n\n".join(text_from_files)
+    if len(combined_text) > 800_000:
+        combined_text = combined_text[:800_000]  # Trim to fit context window
+
+    content.append({"role": "user", "content": combined_text})
+
     chat_memory.append({"role": "user", "content": user_message})
-    formatted_response = format_ai_response(ai_response)
-    chat_memory.append({"role": "assistant", "content": ai_response})
+    ai_response = invoke_claude_bedrock(chat_memory + content)  # Send chat history
 
+    chat_memory.append({"role": "assistant", "content": ai_response})
+    formatted_response = format_ai_response(ai_response)
     return jsonify({"response": f"""<br><br><div><pre>{formatted_response}</pre><button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""})
   
 ### ✅ Claude AI Invocation ###
