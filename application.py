@@ -288,6 +288,9 @@ def chat():
         combined_text = combined_text[:800_000]  # Trim excess text
 
     if combined_text:
+        chat_memory.append({"role": "user", "content": combined_text})
+    
+    if combined_text:
         content.append({"type": "text", "text": combined_text})
 
     # Store user input in chat memory before invoking Claude
