@@ -1042,6 +1042,15 @@ document.querySelectorAll('#quickPrompt-options .dropdown-option').forEach(optio
   });
 });
 
+    let selectedWritingStyle = "default"; // default value
+
+document.querySelectorAll('#writingStyle-options .dropdown-option').forEach(option => {
+  option.addEventListener('click', (e) => {
+    selectedWritingStyle = option.getAttribute('data-value');
+    // Optionally update the trigger text so the user sees their selection
+    document.getElementById('writingStyle-trigger').querySelector('span').textContent = option.textContent;
+  });
+});
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
