@@ -303,9 +303,13 @@ def chat():
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
-    print("Response: 200")
-    # Format the response for display
+
+  # Format the response for display
     formatted_response = format_ai_response(ai_response)
+
+    quick_prompt = request.form.get("quickPrompt")
+    writing_style = data.get("writingStyle")
+    print(writing_style, quick_prompt, "200")
 
     return jsonify({
         "response": f"""<br><br><div><pre>{formatted_response}</pre>
