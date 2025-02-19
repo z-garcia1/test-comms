@@ -785,6 +785,8 @@ async function sendMessage() {
         if (fileInput.files.length > 0) {
             const formData = new FormData();
             formData.append("message", modifiedMessage); // Include modified message
+            formData.append("writingStyle", selectedWritingStyle);
+            formData.append("quickPrompt", selectedQuickPrompt);
 
             // Append each selected file to the FormData object
             for (let i = 0; i < fileInput.files.length; i++) {
@@ -1025,6 +1027,17 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     });
+
+    let selectedQuickPrompt = ""; // default value if needed
+
+document.querySelectorAll('#quickPrompt-options .dropdown-option').forEach(option => {
+  option.addEventListener('click', () => {
+    selectedQuickPrompt = option.getAttribute('data-value');
+    // Optionally update the trigger text so the user sees their selection
+    document.getElementById('quickPrompt-trigger').querySelector('span').textContent = option.textContent;
+  });
+});
+
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
