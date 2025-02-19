@@ -87,13 +87,14 @@ def callback():
     expiration_time = time.time() + 300  # Token expires in 5 minutes
     # Store new token in the valid list
     VALID_TOKENS.append((new_token, expiration_time))
+    time.sleep(1)
     return redirect(f"/loading?code={auth_code}&token={new_token}")
 
 @app.route("/loading")
 def loading():
     """Loading page to store the token before redirecting to home"""
     token = request.args.get("token")
-    time.sleep(3)
+    time.sleep(2)
     # Ensure the token is valid before proceeding
     if not token or not any(t[0] == token for t in VALID_TOKENS):
         auth_code = request.args.get("code")
