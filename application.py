@@ -244,9 +244,10 @@ def chat():
         file_ext = file.filename.split(".")[-1].lower()
 
         # Ensure only one image file is uploaded at a time
-        if file_ext in ["png", "jpeg", "jpg"]:
-            if len(files) > 1:
-                return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+        image_files = [file for file in files if file.filename.split(".")[-1].lower() in ["png", "jpeg", "jpg"]]
+        if len(image_files) > 1:
+            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(file_path)
