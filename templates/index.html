@@ -736,12 +736,11 @@
     </div>
 </div>
 <script>
-  async function sendMessage() {
+async function sendMessage() {
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
     const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
-    const file = fileInput.files[0];
 
     // Capture advanced AI settings
     const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
@@ -749,16 +748,17 @@
     const topP = document.getElementById("topP")?.value || "0.9";
     const topK = document.getElementById("topK")?.value || "50";
 
-    if (userMessage === "" && !file) {
+    // Ensure at least one input (text or file) is provided
+    if (userMessage === "" && fileInput.files.length === 0) {
         alert("Please enter a message or upload a file before sending.");
         return;
     }
 
-    // Construct hidden AI settings prompt
+    // Construct hidden AI settings prompt and modified message
     let hiddenPrompt = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
     const modifiedMessage = hiddenPrompt + userMessage;
 
-    // Display user message in chat
+    // Display user message in chat if available
     if (userMessage) {
         const userMessageElement = document.createElement('div');
         userMessageElement.className = 'chat-message user';
@@ -782,18 +782,23 @@
 
     try {
         let response;
-        let data;
 
-        if (file) {
+        // Check if files are attached
+        if (fileInput.files.length > 0) {
             const formData = new FormData();
-            formData.append("message", modifiedMessage); // Send modified message with AI settings
-            formData.append("file", file); // Single file upload
+            formData.append("message", modifiedMessage); // Include modified message
+
+            // Append each selected file to the FormData object
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append("file", fileInput.files[i]);
+            }
 
             response = await fetch("/chat", {
                 method: "POST",
                 body: formData
             });
         } else {
+            // Text-only request
             response = await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -805,7 +810,7 @@
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
 
-        data = await response.json();
+        const data = await response.json();
 
         // Remove the spinner
         spinner.remove();
@@ -818,7 +823,6 @@
         } else {
             throw new Error("Empty response from server.");
         }
-
     } catch (error) {
         spinner.remove();
         console.error("Error:", error);
