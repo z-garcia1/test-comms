@@ -768,8 +768,6 @@ async function sendMessage() {
 
     // Clear input fields before processing
     userInput.value = '';
-    fileInput.value = "";
-    document.getElementById('fileInfo').style.display = "none";
 
     // Add loading spinner
     const spinner = document.createElement("div");
@@ -832,7 +830,9 @@ async function sendMessage() {
         errorMessageElement.textContent = `Error: ${error.message}`;
         chatBox.appendChild(errorMessageElement);
     }
-
+    //clear file
+    fileInput.value = "";
+    document.getElementById('fileInfo').style.display = "none";
     // Scroll to the bottom after response
     chatBox.scrollTop = chatBox.scrollHeight;
 }
