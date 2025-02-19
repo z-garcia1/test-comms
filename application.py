@@ -302,7 +302,7 @@ def chat():
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
-
+    print("Response: 200")
     # Format the response for display
     formatted_response = format_ai_response(ai_response)
 
