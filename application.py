@@ -307,9 +307,9 @@ def chat():
   # Format the response for display
     formatted_response = format_ai_response(ai_response)
 
-    quick_prompt = request.form.get("quickPrompt")
-    writing_style = data.get("writingStyle")
-    print(writing_style, quick_prompt, "200")
+    #quick_prompt = request.form.get("quickPrompt")
+    #writing_style = data.get("writingStyle")
+    print("Response: 200")
 
     return jsonify({
         "response": f"""<br><br><div><pre>{formatted_response}</pre>
