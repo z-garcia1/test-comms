@@ -789,8 +789,8 @@ async function sendMessage() {
         if (fileInput.files.length > 0) {
             const formData = new FormData();
             formData.append("message", modifiedMessage); // Include modified message
-            formData.append("writingStyle", selectedWritingStyle);
-            formData.append("quickPrompt", selectedQuickPrompt);
+            //formData.append("writingStyle", selectedWritingStyle);
+            //formData.append("quickPrompt", selectedQuickPrompt);
 
             // Append each selected file to the FormData object
             for (let i = 0; i < fileInput.files.length; i++) {
