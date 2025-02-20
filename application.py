@@ -64,10 +64,8 @@ chat_memory = []
 ### ✅ Page Routing ###
 @app.route('/')
 def home():
-    user_token = request.cookies.get("token")
-    # Clean expired tokens
+     user_token = request.cookies.get("token")
     clean_expired_tokens()
-    # Allow access if the token is in the valid token list
     if not user_token or not any(t[0] == user_token for t in VALID_TOKENS):
         return redirect("/login")
     return render_template("acknowledge.html")
@@ -84,7 +82,7 @@ def callback():
     if not auth_code:
         return "Authorization failed", 400
     new_token = generate_secure_token()
-    expiration_time = time.time() + 300  # Token expires in 5 minutes (or adjust as needed)
+    expiration_time = time.time() + 28800  # Token expires in 8 hours
     VALID_TOKENS.append((new_token, expiration_time))
     time.sleep(1)
     response = redirect(f"/loading?code={auth_code}")
@@ -95,13 +93,9 @@ def callback():
 @app.route("/loading")
 def loading():
     """Loading page to store the token before redirecting to home"""
-    token = request.args.get("token")
     time.sleep(2)
-    # Ensure the token is valid before proceeding
-    if not token or not any(t[0] == token for t in VALID_TOKENS):
-        auth_code = request.args.get("code")
-        return redirect("/callback?code={auth_code}")
-    return redirect(f"/?token={token}")
+    return redirect("/")
+
 
 @app.route("/logout")
 def logout():
