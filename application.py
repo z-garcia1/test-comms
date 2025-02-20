@@ -324,9 +324,7 @@ def chat():
 
 @app.route("/reset_chat", methods=["POST"])
 def reset_chat():
-    global chat_memory
-    chat_memory = []
-    #session['chat_memory'] = []
+    session['chat_memory'] = []
 
 @app.route("/chat/image", methods=["POST"])
 def chat_with_image():
