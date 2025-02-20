@@ -1,4 +1,5 @@
 from flask import Flask, request, render_template, jsonify, redirect, session
+from flask_session import Session
 import boto3
 import json
 import os
@@ -48,6 +49,12 @@ UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"pdf", "docx", "xlsx", "pptx", "png", "jpeg", "jpg"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = "./flask_session_files"  # optional: a directory to store session files
+app.config["SESSION_PERMANENT"] = True
+app.config["PERMANENT_SESSION_LIFETIME"] = 43200
+Session(app)
+
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -59,7 +66,7 @@ logging.basicConfig(handlers=[logging.NullHandler()])
 logging.getLogger().setLevel(logging.CRITICAL)
 logging.getLogger().disabled = True
 
-chat_memory = []
+#chat_memory = []
 
 ### ✅ Page Routing ###
 @app.route('/')
@@ -223,7 +230,7 @@ def format_ai_response(response):
 def chat():
     """Handles user messages & file uploads, allowing text-only requests as well."""
     
-    #chat_memory = session.get('chat_memory', [])
+    chat_memory = session.get('chat_memory', [])
 
     # Check if the request contains JSON or form data
     if request.is_json:
@@ -298,7 +305,7 @@ def chat():
     chat_memory.append({"role": "user", "content": user_message})
 
     # Invoke Claude AI for processing
-    ai_response = invoke_claude_bedrock(content)
+    ai_response = invoke_claude_bedrock(content, chat_memory)
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
@@ -309,7 +316,7 @@ def chat():
     #quick_prompt = request.form.get("quickPrompt")
     #writing_style = data.get("writingStyle")
     print("Response: 200")
-    #session['chat_memory'] = chat_memory
+    session['chat_memory'] = chat_memory
     return jsonify({
         "response": f"""<br><br><div><pre>{formatted_response}</pre>
                         <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
@@ -350,7 +357,7 @@ def chat_with_image():
 
 
 ### ✅ Claude AI Invocation ###
-def invoke_claude_bedrock(content):
+def invoke_claude_bedrock(content, chat_memory):
     """Sends text-based content to Claude AI via AWS Bedrock, preserving chat history."""
 
     # Ensure chat_memory includes only past messages
