@@ -298,7 +298,7 @@ def chat():
     chat_memory.append({"role": "user", "content": user_message})
 
     # Invoke Claude AI for processing
-    ai_response = invoke_claude_bedrock(content, chat_memory)
+    ai_response = invoke_claude_bedrock(content)
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
