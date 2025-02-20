@@ -389,6 +389,10 @@
     position: relative;
     display: inline-block;
 }     
+    .tooltip-disclaimer-container{
+        position: relative;
+        display: inline-block;
+    }
     .chat-message.web-results {
     background-color: #e3f2fd;
     padding: 10px;
@@ -636,6 +640,34 @@
     height: 1rem;
     vertical-align: middle;
 }
+#tooltip-disclaimer {
+    position: absolute;
+    top: 50%;             /* Center vertically relative to its container */
+    right: 0;             /* Align to the right side */
+    transform: translateY(-50%);  /* Center vertically */
+    background: black;
+    color: white;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    pointer-events: none;
+}
+
+/* Adjust the tooltip arrow to appear on the left side of the tooltip */
+#tooltip-disclaimer::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%;  /* Place the arrow to the left of the tooltip */
+    transform: translateY(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent black transparent transparent;
+}
     </style>
 </head>
 <body>
@@ -658,6 +690,8 @@
     </label>
     <div class="select-wrapper">
         <div class="select-container">
+            <div class="tooltip- disclaimer-container">
+            <span id="tooltip-disclaimer">Outputs are imperfect. A human editor (TI style expert) still must review, revise and approve generated content.</span>
             <button class="select-trigger" id="writingStyle-trigger">
                 <span>-- Default --</span>
                 <span class="dropdown-arrow">❮</span> <!-- Dropdown arrow -->
@@ -669,6 +703,7 @@
                     <div class="dropdown-option" data-value="formal">📄 Formal</div>
                     <div class="dropdown-option" data-value="creative">🎨 Creative</div>
                 </div>
+            </div>
             </div>
         </div>
     </div>
@@ -960,7 +995,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const option = e.target.closest('.dropdown-option');
         if (option) {
             const value = option.dataset.value;
-            writingStyleTrigger.querySelector('span').textContent = option.textContent;
+            writingStyleTrigger.querySelector('span').innerHTML = option.innerHTML;
             writingStyleDropdown.classList.remove('active');
             isWritingStyleOpen = false;
 
@@ -978,6 +1013,22 @@ document.addEventListener("DOMContentLoaded", function () {
                 topP.value = 0.5;
                 topK.value = 15;
                 document.getElementById("systemPrompt").value = "Test"
+                const tooltipDisclaimer = document.getElementById("tooltip-disclaimer");
+                if (tooltipDisclaimer) {
+                    // Override default positioning to move it to the right side
+                    // You can adjust these values as needed
+                    tooltipDisclaimer.style.left = "auto";
+                    tooltipDisclaimer.style.right = "0";
+                    tooltipDisclaimer.style.transform = "none";  // Remove horizontal centering
+                    // Make the tooltip visible
+                    tooltipDisclaimer.style.opacity = "1";
+                    tooltipDisclaimer.style.visibility = "visible";
+
+                    // Hide the tooltip after 10 seconds
+                    setTimeout(() => {
+                        tooltipDisclaimer.style.opacity = "0";
+                        tooltipDisclaimer.style.visibility = "hidden";
+                    }, 10000); }
             } else if (value === "formal") {
                 temperature.value = 0.1;
                 topP.value = 0.4;
