@@ -1066,24 +1066,28 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
     //Reset button
+    document.addEventListener("DOMContentLoaded", function () {
+    // Your existing event listener code
     document.getElementById('clearChatBtn').addEventListener('click', async function() {
-    // Clear the chat box on the UI
-    const chatBox = document.getElementById('chat-box');
-    chatBox.innerHTML = '';
+        // Clear the chat box on the UI
+        const chatBox = document.getElementById('chat-box');
+        chatBox.innerHTML = '';
        
-    // Send a request to the backend to clear the chat memory
-    try {
-        const response = await fetch('/reset_chat', {
-            method: 'POST',
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}) // You may send additional data if needed
-        });
-        const data = await response.json();
-        console.log(data.status);
-    } catch (err) {
-        console.error("Error clearing chat memory:", err);
-    }
-});
+        // Send a request to the backend to clear the chat memory
+        try {
+            const response = await fetch('/reset_chat', {
+                method: 'POST',
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({})
+            });
+            const data = await response.json();
+            console.log(data.status);
+        } catch (err) {
+            console.error("Error clearing chat memory:", err);
+        }
+    });
+    });
+
 
 </script>
 </body>
