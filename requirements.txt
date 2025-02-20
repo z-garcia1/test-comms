@@ -13,3 +13,4 @@ pandas
 python-docx
 Werkzeug
 Pillow
+Flask-Session
