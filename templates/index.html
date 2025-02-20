@@ -392,6 +392,7 @@
     .tooltip-disclaimer-container{
         position: relative;
         display: inline-block;
+        top: 90px;
     }
     .chat-message.web-results {
     background-color: #e3f2fd;
@@ -681,6 +682,8 @@
 
     <div class="main-container">
     <!-- Sidebar -->
+    <div class="tooltip- disclaimer-container">
+            <span id="tooltip-disclaimer">Outputs are imperfect. A human editor (TI style expert) still must review, revise and approve generated content.</span>
     <div class="sidebar">
         <h3>&nbsp;</h3>
         <!-- LLM Writing Style Dropdown -->
@@ -690,8 +693,6 @@
     </label>
     <div class="select-wrapper">
         <div class="select-container">
-            <div class="tooltip- disclaimer-container">
-            <span id="tooltip-disclaimer">Outputs are imperfect. A human editor (TI style expert) still must review, revise and approve generated content.</span>
             <button class="select-trigger" id="writingStyle-trigger">
                 <span>-- Default --</span>
                 <span class="dropdown-arrow">❮</span> <!-- Dropdown arrow -->
@@ -703,7 +704,6 @@
                     <div class="dropdown-option" data-value="formal">📄 Formal</div>
                     <div class="dropdown-option" data-value="creative">🎨 Creative</div>
                 </div>
-            </div>
             </div>
         </div>
     </div>
@@ -758,6 +758,7 @@
             </thead>
         </table>
         <button class="toggle-btn" id="toggleBtn">❮</button>
+    </div>
     </div>
 
     <!-- Chat Container -->
