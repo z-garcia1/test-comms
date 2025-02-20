@@ -59,7 +59,7 @@ logging.basicConfig(handlers=[logging.NullHandler()])
 logging.getLogger().setLevel(logging.CRITICAL)
 logging.getLogger().disabled = True
 
-chat_memory = []
+#chat_memory = []
 
 ### ✅ Page Routing ###
 @app.route('/')
@@ -222,6 +222,8 @@ def format_ai_response(response):
 @app.route("/chat", methods=["POST"])
 def chat():
     """Handles user messages & file uploads, allowing text-only requests as well."""
+    
+    chat_memory = session.get('chat_memory', [])
 
     # Check if the request contains JSON or form data
     if request.is_json:
@@ -296,7 +298,7 @@ def chat():
     chat_memory.append({"role": "user", "content": user_message})
 
     # Invoke Claude AI for processing
-    ai_response = invoke_claude_bedrock(content)
+    ai_response = invoke_claude_bedrock(content, chat_memory)
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
@@ -307,11 +309,15 @@ def chat():
     #quick_prompt = request.form.get("quickPrompt")
     #writing_style = data.get("writingStyle")
     print("Response: 200")
-
+    session['chat_memory'] = chat_memory
     return jsonify({
         "response": f"""<br><br><div><pre>{formatted_response}</pre>
                         <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
     })
+
+@app.route("/reset_chat", methods=["POST"])
+def reset_chat():
+    session['chat_memory'] = []
 
 @app.route("/chat/image", methods=["POST"])
 def chat_with_image():
@@ -342,7 +348,7 @@ def chat_with_image():
 
 
 ### ✅ Claude AI Invocation ###
-def invoke_claude_bedrock(content):
+def invoke_claude_bedrock(content, chat_memory):
     """Sends text-based content to Claude AI via AWS Bedrock, preserving chat history."""
 
     # Ensure chat_memory includes only past messages
