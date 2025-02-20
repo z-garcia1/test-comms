@@ -663,8 +663,8 @@
 #tooltip-disclaimer::after {
     content: "";
     position: absolute;
-    top: 50%;
-    right: 100%;
+    top: 30%;
+    left: 70%;
     transform: translateY(-50%);
     border-width: 6px;
     border-style: solid;
@@ -697,7 +697,6 @@
                 <span class="dropdown-arrow">❮</span> <!-- Dropdown arrow -->
             </button>
             <div class="custom-dropdown" id="writingStyle-dropdown">
-                    <div id="tooltip-disclaimer">Outputs are imperfect. A human editor (TI style expert) still must review, revise and approve generated content.</div>
                 <div class="options-list" id="writingStyle-options">
                     <div class="dropdown-option" data-value="default">-- Default --</div>
                     <div class="dropdown-option" data-value="ti_style"><img src="static/favicon.ico" class="emoji-icon">&nbsp;TI Style [Prototype]</div>
@@ -707,6 +706,7 @@
             </div>
         </div>
     </div>
+        <div id="tooltip-disclaimer">Outputs are imperfect. A human editor (TI style expert) still must review, revise and approve generated content.</div>
 </div>
  
 <div class="select-form-group">
@@ -1013,22 +1013,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 topP.value = 0.5;
                 topK.value = 15;
                 document.getElementById("systemPrompt").value = "Test"
+                // Show tooltip-disclaimer for 10 seconds
                 const tooltipDisclaimer = document.getElementById("tooltip-disclaimer");
                 if (tooltipDisclaimer) {
-                    // Override default positioning to move it to the right side
-                    // You can adjust these values as needed
-                    tooltipDisclaimer.style.left = "auto";
-                    tooltipDisclaimer.style.right = "0";
-                    tooltipDisclaimer.style.transform = "none";  // Remove horizontal centering
-                    // Make the tooltip visible
                     tooltipDisclaimer.style.opacity = "1";
                     tooltipDisclaimer.style.visibility = "visible";
-
-                    // Hide the tooltip after 10 seconds
                     setTimeout(() => {
                         tooltipDisclaimer.style.opacity = "0";
                         tooltipDisclaimer.style.visibility = "hidden";
-                    }, 10000); }
+                    }, 10000);
+                }
             } else if (value === "formal") {
                 temperature.value = 0.1;
                 topP.value = 0.4;
