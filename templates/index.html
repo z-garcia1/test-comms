@@ -691,7 +691,8 @@
             <div class="custom-dropdown" id="writingStyle-dropdown">
                 <div class="options-list" id="writingStyle-options">
                     <div class="dropdown-option" data-value="default">-- Default --</div>
-                    <div class="dropdown-option" data-value="ti_style"><pre><img src="static/favicon.ico" class="emoji-icon">TI Style&nbsp;&nbsp;&nbsp;<span class="price-mark">Cost ≈ $0.09/prompt</span></pre></div>
+                    <div class="dropdown-option" data-value="ap_style">📝 AP Style (2024)</div>
+                    <div class="dropdown-option" data-value="ti_style"><img src="static/favicon.ico" class="emoji-icon">TI Style<pre>&nbsp;&nbsp;<span class="price-mark">Cost ≈ $0.09/prompt</span></pre></div>
                     <div class="dropdown-option" data-value="formal">📄 Formal</div>
                     <div class="dropdown-option" data-value="creative">🎨 Creative</div>
                 </div>
@@ -1000,6 +1001,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 temperature.value = 0.7;
                 topP.value = 0.9;
                 topK.value = 50;
+                document.getElementById("systemPrompt").value = "";
+             } else if (value === "ap_style") {
+                temperature.value = 0.1;
+                topP.value = 0.5;
+                topK.value = 15;
+                document.getElementById("systemPrompt").value = "Always write in AP Style, applying the all most recent AP Style rules you know";
             } else if (value === "ti_style") {
                 temperature.value = 0.1;
                 topP.value = 0.5;
@@ -1019,10 +1026,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 temperature.value = 0.1;
                 topP.value = 0.4;
                 topK.value = 5;
+                document.getElementById("systemPrompt").value = "";
             } else if (value === "creative") {
                 temperature.value = 1.0;
                 topP.value = 1.0;
                 topK.value = 70;
+                document.getElementById("systemPrompt").value = "";
             }
         }
     });
