@@ -691,7 +691,7 @@
             <div class="custom-dropdown" id="writingStyle-dropdown">
                 <div class="options-list" id="writingStyle-options">
                     <div class="dropdown-option" data-value="default">-- Default --</div>
-                    <div class="dropdown-option" data-value="ti_style"><img src="static/favicon.ico" class="emoji-icon">&nbsp;TI Style&nbsp;<span class="price-mark">Cost ≈ $0.09/prompt</span></div>
+                    <div class="dropdown-option" data-value="ti_style"><pre><img src="static/favicon.ico" class="emoji-icon">TI Style&nbsp;&nbsp;&nbsp;<span class="price-mark">Cost ≈ $0.09/prompt</span></pre></div>
                     <div class="dropdown-option" data-value="formal">📄 Formal</div>
                     <div class="dropdown-option" data-value="creative">🎨 Creative</div>
                 </div>
@@ -1013,7 +1013,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     setTimeout(() => {
                         tooltipDisclaimer.style.opacity = "0";
                         tooltipDisclaimer.style.visibility = "hidden";
-                    }, 10000);
+                    }, 18000);
                 }
             } else if (value === "formal") {
                 temperature.value = 0.1;
