@@ -644,7 +644,7 @@
 #tooltip-disclaimer {
     all: unset; /* Remove all inherited properties */
     position: fixed;  /* Fixed relative to the viewport */
-    bottom: 5%;         /* Adjust as needed */
+    bottom: 3%;         /* Adjust as needed */
     left: 25%;         /* Align to right edge */
     transform: translateY(-50%);
     background: black;
@@ -663,8 +663,7 @@
 #tooltip-disclaimer::after {
     content: "";
     position: absolute;
-    bottom: 5%;
-    left: 25%;
+    left: 0;
     transform: translateY(-50%);
     border-width: 6px;
     border-style: solid;
