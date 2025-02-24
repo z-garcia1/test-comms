@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 from bs4 import BeautifulSoup
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_core.rate_limiters import InMemoryRateLimiter
+import pdfplumber
 
 # AWS Bedrock client setup
 bedrock = boto3.client('bedrock-runtime', 
@@ -145,10 +146,32 @@ def convert_image_to_base64(file_path):
         return base64.b64encode(file.read()).decode("utf-8")
 
 def extract_text_from_pdf(file_path):
-    """Extracts text from a PDF file."""
-    doc = fitz.open(file_path)
-    text = "\n".join(page.get_text() for page in doc)
-    return text.strip()
+    """Extracts text from a PDF file, falling back to pdfplumber if fitz fails."""
+    try:
+        # Attempt extraction using fitz (PyMuPDF)
+        doc = fitz.open(file_path)
+        text = "\n".join(page.get_text() for page in doc).strip()
+        if text:
+            return text
+        else:
+            # Raise an exception if no text is extracted
+            raise ValueError("No text extracted using fitz")
+    except Exception as e:
+        # Fallback to pdfplumber
+        try:
+            extracted_text = []
+            with pdfplumber.open(file_path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        extracted_text.append(page_text)
+            text = "\n".join(extracted_text).strip()
+            if text:
+                return text
+            else:
+                return f"Empty pdfplumber: {e}"
+        except Exception as e2:
+            return f"Both fitz and pdfplumber extraction failed: {e} | {e2}"
 
 def extract_text_from_docx(file_path):
     """Extracts text from a Word document (.docx)."""
