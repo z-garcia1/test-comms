@@ -14,3 +14,4 @@ python-docx
 Werkzeug
 Pillow
 Flask-Session
+yake
