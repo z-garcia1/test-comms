@@ -167,7 +167,7 @@
             border-radius: 5px;
             padding: 10px;
             background: #f9f9f9;
-            margin-bottom: 20px;
+            margin-bottom: 1px;
             position: relative;
         }
         @media (min-width: 1600px) {
@@ -202,16 +202,25 @@
         .input-container {
             width: 100%;
             max-width: 1000px;
-            display: flex;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background-color: white;
+            position: relative;
+            bottom: -20px;
         }
         .input-container textarea {
             flex: 1;
             padding: 1rem;
             font-size: 1rem;
-            border: 1px solid #ddd;
+            outline: none;
+            border: none;
             border-radius: 8px;
             resize: none;
             font-family: Arial, Helvetica, sans-serif;
+            background-color: transparent;
+            max-height: 300px;
+            margin-bottom: -40px;
         }
         .spinner{
             display: none;
@@ -227,14 +236,21 @@
             to {transform: rotate(360deg);}
         }
         .button-send{
-            font-size: 1.5rem;
+            font-size: 1rem;
+            padding: 0px;
+            height: 40px;
+            width: 40px;
             margin-left: 0.5rem;
-            padding: 1rem 2rem;
             background-color: #cc0000;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 20px;
             cursor: pointer;
+            right: 0;
+            position: absolute;
+            justify-content: center;
+            right: 20px;
+            bottom: 18px;
         }
         .button-send:hover {
             background-color: #a80000;
@@ -256,11 +272,11 @@
             color: #848282;
         }
         .send-instruction{
-            font-size: 0.7rem;
+            font-size: 0.6rem;
             padding: 0;
             position: relative;
             right: -26.5625rem;
-            bottom: 7px;
+            bottom: 5px;
             transition: transform 0.1s ease-in-out;
         }
         @media (min-width: 1600px){
@@ -388,6 +404,7 @@
    .tooltip-container{
     position: relative;
     display: inline-block;
+    outline: none;
 }     
     .tooltip-disclaimer-container{
         position: relative;
@@ -662,6 +679,20 @@
         .price-mark{
         font-size: 0.7rem;
         }
+        .input-container-top{
+    display: flex;
+    align-items: center;
+}
+.input-container-bottom{
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    left: 12px;
+}
+.no-margin{
+    margin-bottom: 0px !important;
+}
     </style>
 </head>
 <body>
@@ -759,24 +790,28 @@
         <div class="chat-box" id="chat-box">
         </div>
         <div class="input-container">
+            <div class="input-container-top">
+                    <textarea id="user-input" placeholder="Type your message..."></textarea>
+                </div>
           <!--  <div class="tooltip-container"> -->
            <!-- <button class="file" onclick="toggleWebSearch()"><i class="fa-solid fa-globe"></i> -->
             <!--    <span class="tooltip">Search the web</span> -->
            <!-- </button> -->
             <!--</div>-->
-            <input type="file" id="fileUpload" multiple accept=".pdf, .docx, .xlsx, .pptx, .png, .jpg, .jpeg"/>
-            <div class="tooltip-container">
-            <button class="file" id="fileButton"><i class="fa-solid fa-paperclip"></i>
-                <span class="tooltip">Upload files</span>
-            </button>
-            </div>
+                <div class="input-container-bottom">
+                    <input type="file" id="fileUpload" multiple accept=".pdf, .docx, .xlsx, .pptx, .png, .jpg, .jpeg"/>
+                    <div class="tooltip-container">
+                        <button class="file" id="fileButton"><i class="fa-solid fa-paperclip"></i>
+                            <span class="tooltip">Upload files</span>
+                        </button>
+                    </div>
+                </div>
             <div class="hide">Upload file: docx, pptx, pdf, xlsx, jpeg, png, csv</div>
             <div class="file-info" id="fileInfo">
                 <span id="fileName"></span>
                 <button class="clear-button" id="clearButton"><i class="fa-solid fa-x"></i></button>
             </div>
             <div class="upload-div"></div>
-            <textarea id="user-input" placeholder="Type your message..."></textarea>
             <button class="button-send" id="button-send" onclick="sendMessage()"><i class="fas fa-arrow-up"></i></button>
         </div>
         <div>
@@ -1149,7 +1184,34 @@ document.querySelectorAll('#writingStyle-options .dropdown-option').forEach(opti
         console.error("Error clearing chat memory:", err);
     }
 });
+//update height
+    document.addEventListener('DOMContentLoaded', function(){
+        const textarea = document.getElementById('user-input');
+        const chatBox = document.querySelector('.chat-box')
+        const initialHeight = '68px';
 
+        function adjustHeight() {
+            textarea.style.height= 'auto';
+            let newHeight = textarea.scrollHeight
+            textarea.style.height= `${newHeight}px`;
+            if (newHeight >= 100) {
+                textarea.classList.add('no-margin');
+            } else {textarea.classList.remove('no-margin');
+            }
+        }
+        function resetHeight() {
+            textarea.style.height = initialHeight;
+    
+        }
+        function expandOnClick() {
+            adjustHeight();
+        }
+        textarea.addEventListener('input', adjustHeight);
+        chatBox.addEventListener('click', resetHeight);
+        textarea.addEventListener('focus', expandOnClick);
+
+        adjustHeight();
+    });
 </script>
 </body>
 </html>
