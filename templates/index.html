@@ -250,7 +250,7 @@
             position: absolute;
             justify-content: center;
             right: 20px;
-            bottom: 18px;
+            bottom: 8px;
         }
         .button-send:hover {
             background-color: #a80000;
@@ -812,10 +812,11 @@
                 <button class="clear-button" id="clearButton"><i class="fa-solid fa-x"></i></button>
             </div>
             <div class="upload-div"></div>
-            <button class="button-send" id="button-send" onclick="sendMessage()"><i class="fas fa-arrow-up"></i></button>
-        </div>
-        <div>
-            <p class="send-instruction" id="send-instruction">Shift + Enter</p>
+            <div class="tooltip-container">
+            <button class="button-send" id="button-send" onclick="sendMessage()"><i class="fas fa-arrow-up"></i>
+                <span class="tooltip">Send (Shift + Enter)</span>
+            </button>
+            </div>
         </div>
     </div>
 </div>
