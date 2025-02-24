@@ -225,16 +225,21 @@ def format_ai_response(response):
     
     return "<br>".join(formatted_lines)
 
-from rake_nltk import Rake
+import yake
 
-def extract_keywords(text):
-    """
-    Extracts keywords from a text using RAKE.
-    Returns a list of keyword phrases.
-    """
-    rake = Rake()  # Initializes RAKE with default English stopwords
-    rake.extract_keywords_from_text(text)
-    return rake.get_ranked_phrases()
+def extract_keywords(text, max_keywords=10):
+    # Configure YAKE for English. Adjust settings as needed.
+    language = "en"
+    max_ngram_size = 3
+    deduplication_threshold = 0.9
+    kw_extractor = yake.KeywordExtractor(lan=language,
+                                           n=max_ngram_size,
+                                           dedupLim=deduplication_threshold,
+                                           top=max_keywords,
+                                           features=None)
+    keywords = kw_extractor.extract_keywords(text)
+    # Returns list of tuples: (keyword, score)
+    return [kw for kw, score in keywords]
 
 def filter_history(history, dynamic_keywords):
     """
