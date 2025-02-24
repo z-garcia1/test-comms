@@ -225,6 +225,44 @@ def format_ai_response(response):
     
     return "<br>".join(formatted_lines)
 
+from rake_nltk import Rake
+
+def extract_keywords(text):
+    """
+    Extracts keywords from a text using RAKE.
+    Returns a list of keyword phrases.
+    """
+    rake = Rake()  # Initializes RAKE with default English stopwords
+    rake.extract_keywords_from_text(text)
+    return rake.get_ranked_phrases()
+
+def filter_history(history, dynamic_keywords):
+    """
+    Filters the chat history to include:
+      - The last three messages.
+      - Any message that contains at least one dynamically determined keyword.
+    
+    :param history: List of message dictionaries.
+    :param dynamic_keywords: A set of keywords that you want to preserve.
+    """
+    selected_indexes = set()
+    
+    # Check each message for dynamic keywords.
+    for i, msg in enumerate(history):
+        message_text = msg.get("content", "")
+        # Extract keywords from the current message.
+        message_keywords = set(extract_keywords(message_text))
+        # If any of the dynamic keywords are in the extracted keywords, select this message.
+        if message_keywords.intersection(dynamic_keywords):
+            selected_indexes.add(i)
+    
+    # Always include the last three messages regardless.
+    last_one_indexes = set(range(max(0, len(history) - 1), len(history)))
+    selected_indexes = sorted(selected_indexes.union(last_one_indexes))
+    
+    return [history[i] for i in selected_indexes]
+
+
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -358,8 +396,17 @@ def chat_with_image():
 def invoke_claude_bedrock(content, chat_memory):
     """Sends text-based content to Claude AI via AWS Bedrock, preserving chat history."""
 
-    # Ensure chat_memory includes only past messages
-    messages = chat_memory + [{"role": "user", "content": content}]
+    # Append the new user message (without system prompts) to form full history.
+    full_history = chat_memory + [{"role": "user", "content": content}]
+    
+    # Dynamically determine the important keywords.
+    # For instance, extract keywords from the entire conversation:
+    all_text = " ".join(msg.get("content", "") for msg in full_history)
+    dynamic_keywords = set(extract_keywords(all_text))
+
+    filtered_history = filter_history(full_history, dynamic_keywords)
+
+    messages = filtered_history
 
     payload = {
         "anthropic_version": "bedrock-2023-05-31",
