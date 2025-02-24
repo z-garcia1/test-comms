@@ -255,6 +255,28 @@
         .button-send:hover {
             background-color: #a80000;
         }
+        .button-send::after {
+    content: "Send Message"; /* Tooltip text */
+    position: absolute;
+    bottom: 100%; /* Position above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: black;
+    color: white;
+    padding: 5px 8px;
+    font-size: 12px;
+    border-radius: 5px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Show tooltip on hover */
+.button-send:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
         .file {
             font-size: 1.5rem;
             border: transparent;
@@ -812,11 +834,8 @@
                 <button class="clear-button" id="clearButton"><i class="fa-solid fa-x"></i></button>
             </div>
             <div class="upload-div"></div>
-            <div class="tooltip-container">
             <button class="button-send" id="button-send" onclick="sendMessage()"><i class="fas fa-arrow-up"></i>
-                <span class="tooltip">Send (Shift + Enter)</span>
             </button>
-            </div>
         </div>
     </div>
 </div>
