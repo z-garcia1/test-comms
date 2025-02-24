@@ -419,6 +419,10 @@ def chat_with_image():
     formatted_response = format_ai_response(ai_response)
     return jsonify({"response": f"<br><br><div><pre>{formatted_response}</pre><button class='copy-button'><i class='fa-regular fa-copy'></i>&nbsp; Copy</button></div>"})
 
+def get_text_from_content(content):
+    if isinstance(content, list):
+        return " ".join(item.get("text", "") for item in content if isinstance(item, dict))
+    return content
 
 ### ✅ Claude AI Invocation ###
 def invoke_claude_bedrock(content, chat_memory):
@@ -429,7 +433,8 @@ def invoke_claude_bedrock(content, chat_memory):
     
     # Dynamically determine the important keywords.
     # For instance, extract keywords from the entire conversation:
-    all_text = " ".join(msg.get("content", "") for msg in full_history)
+    # Concatenate all text from the full history using our helper function.
+    all_text = " ".join(get_text_from_content(msg.get("content", "")) for msg in full_history)
     dynamic_keywords = set(extract_keywords(all_text))
 
     filtered_history = filter_history(full_history, dynamic_keywords)
