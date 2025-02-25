@@ -24,7 +24,8 @@ from langchain.tools.tavily_search import TavilySearchResults
 from langchain_aws import ChatBedrock
 
 #Tavily
-os.environ["TAVILY_API_KEY"] = os.environ.get('SearchKey')
+search_key = os.environ.get('SearchKey')
+os.environ["TAVILY_API_KEY"] = search_key
 search = TavilySearchAPIWrapper()
 tavily_tool = TavilySearchResults(api_wrapper=search)
 
