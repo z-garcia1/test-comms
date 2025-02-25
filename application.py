@@ -302,7 +302,6 @@ def get_llm():
     return ChatBedrock(
         client=bedrock,
         model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
-        temperature=1.0,
         max_tokens=800
     )
 
@@ -400,15 +399,13 @@ def chat():
 
         # Run the agent with user input
         try:
-            ai_response = agent_chain.run(user_message)
+            agent_response = agent_chain.run(user_message)
+            content.append({"type": "text", "text": agent_response})
         except Exception as e:
-            ai_response = f"Error running web search: {str(e)}"
-    else:
-        # Invoke Claude directly without search
-        ai_response = invoke_claude_bedrock(content, chat_memory)
-
+            agent_response = f"Error running web search: {str(e)}"
+    
     # Invoke Claude AI for processing
-    #ai_response = invoke_claude_bedrock(content, chat_memory)
+    ai_response = invoke_claude_bedrock(content, chat_memory)
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
