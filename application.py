@@ -223,20 +223,17 @@ def process_file(file_path, file_type):
 
     return "Unsupported file type."
 
-def flatten_response(response):
-    # If the response is a list (of dicts), join the 'text' values.
-    if isinstance(response, list):
-        return "\n".join(item.get("text", "") for item in response if isinstance(item, dict))
-    # Otherwise, simply convert it to a string.
-    return str(response)
-
 def format_ai_response(response):
-    # Ensure response is a plain text string
-    flat_response = flatten_response(response)
-    lines = flat_response.split("\n")
+    if isinstance(response, dict):
+        response = response.get("message", "")  # Adjust key based on actual data structure
+
+    if not isinstance(response, str):
+        raise ValueError("Expected a string response, but got:", type(response))
+
+    lines = response.split("\n")
     formatted_lines = []
     for line in lines:
-        match = re.match(r'^(\d+.*?:)(.*)$', line.strip())
+        match = re.match(r"(\*+)(.*)", line.strip())
         if match:
             bold_part = f"<b>{match.group(1)}</b>"
             remaining_part = match.group(2)
@@ -244,7 +241,6 @@ def format_ai_response(response):
         else:
             formatted_lines.append(line)
     return "<br>".join(formatted_lines)
-
 
 import yake
 
