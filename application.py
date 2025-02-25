@@ -337,7 +337,7 @@ def chat():
     if not user_message and not files:
         return jsonify({"error": "No input provided"}), 400
 
-    content = [{"type": "text", "text": user_message}] if user_message else []
+    content = user_message if user_message else ""
     text_from_files = []
 
     for file in files:
