@@ -202,21 +202,6 @@ def extract_text_from_pptx(file_path):
                 text.append(shape.text)
     return "\n".join(text).strip()
 
-# Format AI response for HTML rendering
-def format_ai_response(response):
-    lines = response.split("\n")
-    formatted_lines = []
-    for line in lines:
-        match = re.match(r'^(\d+.*?:)(.*)$', line.strip())
-        if match:
-            bold_part = f"<b>{match.group(1)}</b>"
-            remaining_part = match.group(2)
-            formatted_lines.append(f"{bold_part}{remaining_part}")
-        else:
-            formatted_lines.append(line)
-    
-    return "<br>".join(formatted_lines)
-
 def process_file(file_path, file_type):
     """Processes a file and extracts its text."""
 
@@ -238,8 +223,17 @@ def process_file(file_path, file_type):
 
     return "Unsupported file type."
 
+def flatten_response(response):
+    # If the response is a list (of dicts), join the 'text' values.
+    if isinstance(response, list):
+        return "\n".join(item.get("text", "") for item in response if isinstance(item, dict))
+    # Otherwise, simply convert it to a string.
+    return str(response)
+
 def format_ai_response(response):
-    lines = response.split("\n")
+    # Ensure response is a plain text string
+    flat_response = flatten_response(response)
+    lines = flat_response.split("\n")
     formatted_lines = []
     for line in lines:
         match = re.match(r'^(\d+.*?:)(.*)$', line.strip())
@@ -249,8 +243,8 @@ def format_ai_response(response):
             formatted_lines.append(f"{bold_part}{remaining_part}")
         else:
             formatted_lines.append(line)
-    
     return "<br>".join(formatted_lines)
+
 
 import yake
 
