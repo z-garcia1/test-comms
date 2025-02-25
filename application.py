@@ -88,15 +88,6 @@ def home():
 
 PUBLIC_ROUTES = {"/chat", "/reset_chat"}
 
-@app.before_request
-def check_auth():
-    """Ensure authentication only for restricted routes"""
-    if request.path not in PUBLIC_ROUTES:
-        user_token = request.cookies.get("token")
-        clean_expired_tokens()
-        if not user_token or not any(t[0] == user_token for t in VALID_TOKENS):
-            return redirect("/login")
-
 @app.route("/login")
 def login():
     # Redirect the user to the TI login page
