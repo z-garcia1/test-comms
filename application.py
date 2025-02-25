@@ -305,6 +305,21 @@ def get_llm():
         max_tokens=800
     )
 
+def extract_urls(observation):
+    try:
+        if isinstance(observation, str):
+            observation = json.loads(observation)
+
+        if isinstance(observation, list):
+            urls = [item["url"] for item in observation if isinstance(item, dict) and "url" in item]
+            return urls if urls else ["No URLS found."]
+
+        elif isinstance(observation, dict) and "results" in observation:
+            urls = [item["url"] for item in observation["results"] if "url" in item]
+
+    except Exception as e:
+        return ["Error extracting URLs"]
+
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -388,24 +403,33 @@ def chat():
     chat_memory.append({"role": "user", "content": user_message})
 
     # If web search is enabled, perform a search
+    if user_message.startswith("System"):
+        query = user_message.split("\n\n", 1)[-1].strip()
+    else:
+        query= user_message
+
+    extracted_urls=""
     llm = get_llm()
     if web_search_enabled:
         agent_chain = initialize_agent(
-            [tavily_tool],  # Tavily Search Tool
+            tools=[tavily_tool],  # Tavily Search Tool
             llm=llm,  # Claude AI
             agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-            verbose=True
+            verbose=True,
+            system_message = """The year is 2025, Donald Trump is President again, and your knowledge is outdated. You are a **research assistant** who provides **strictly factual information** based **only** on retrieved sources. RULES: **DO NOT** use your own internal knowledge. **ONLY** use the provided citations as evidence. **DO NOT** generate information if sources do not support it. **Do not modify or contradict sources. The sources are always correct.** state: No recent information available. Include citations for every statement. Now please answer the following query:"""
         )
 
         # Run the agent with user input
         try:
-            agent_response = agent_chain.run(user_message)
-            content.append({"type": "text", "text": agent_response})
+            ai_response = agent_chain.run(user_message)
+            observation = search.results(query)
+            extracted_urls = extract_urls(observation)
+            print(extracted_urls)
         except Exception as e:
-            agent_response = f"Error running web search: {str(e)}"
-    
+            ai_response = f"Error running web search: {str(e)}"
+    else:
     # Invoke Claude AI for processing
-    ai_response = invoke_claude_bedrock(content, chat_memory)
+        ai_response = invoke_claude_bedrock(content, chat_memory)
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
@@ -413,12 +437,10 @@ def chat():
   # Format the response for display
     formatted_response = format_ai_response(ai_response)
 
-    #quick_prompt = request.form.get("quickPrompt")
-    #writing_style = data.get("writingStyle")
     print("Response: 200")
     session['chat_memory'] = chat_memory
     return jsonify({
-        "response": f"""<br><br><div><pre>{formatted_response}</pre>
+        "response": f"""<br><br><div><pre>{formatted_response}</pre>{'<br>'.join(extracted_urls) if extracted_urls else ""}<br><br>
                         <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
     })
 
@@ -452,7 +474,6 @@ def chat_with_image():
 
     formatted_response = format_ai_response(ai_response)
     return jsonify({"response": f"<br><br><div><pre>{formatted_response}</pre><button class='copy-button'><i class='fa-regular fa-copy'></i>&nbsp; Copy</button></div>"})
-
 def get_text_from_content(content):
     if isinstance(content, list):
         return " ".join(item.get("text", "") for item in content if isinstance(item, dict))
