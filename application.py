@@ -21,7 +21,6 @@ from langchain_core.rate_limiters import InMemoryRateLimiter
 import pdfplumber
 from langchain.utilities.tavily_search import TavilySearchAPIWrapper
 from langchain.tools.tavily_search import TavilySearchResults
-from langchain.agents import initialize_agent, AgentType
 from langchain_aws import ChatBedrock
 
 #Tavily
@@ -311,6 +310,7 @@ def get_llm():
 @app.route("/chat", methods=["POST"])
 def chat():
     """Handles user messages & file uploads, allowing text-only requests as well."""
+    from langchain.agents import initialize_agent, AgentType
     
     chat_memory = session.get('chat_memory', [])
 
