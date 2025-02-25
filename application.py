@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_core.rate_limiters import InMemoryRateLimiter
 import pdfplumber
-from langchain.utilities.tavily_search import TavilySearchAPIWrapper
+ from langchain_community.utilities.tavily_search import TavilySearchAPIWrapper
 from langchain.tools.tavily_search import TavilySearchResults
 from langchain_aws import ChatBedrock
 
