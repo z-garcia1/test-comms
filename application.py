@@ -225,12 +225,17 @@ def process_file(file_path, file_type):
 
 def format_ai_response(response):
     if isinstance(response, dict):
-        response = response.get("message", "")  # Adjust key based on actual data structure
+        # Try to extract the main message content (adjust the key as needed)
+        response_text = response.get("content", "")
+        if not response_text:
+            response_text = str(response)  # Fallback: Convert full response to string
+    else:
+        response_text = response  # Assume it's already a string
 
-    if not isinstance(response, str):
-        raise ValueError("Expected a string response, but got:", type(response))
+    if not isinstance(response_text, str):
+        raise ValueError("Expected a string response, but got:", type(response_text))
 
-    lines = response.split("\n")
+    lines = response_text.split("\n")
     formatted_lines = []
     for line in lines:
         match = re.match(r"(\*+)(.*)", line.strip())
@@ -241,6 +246,7 @@ def format_ai_response(response):
         else:
             formatted_lines.append(line)
     return "<br>".join(formatted_lines)
+
 
 import yake
 
