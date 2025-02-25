@@ -400,8 +400,7 @@ def chat():
 
         # Run the agent with user input
         try:
-            web_response = agent_chain.run(user_message)
-            ai_response = invoke_claude_bedrock(web_response)
+            ai_response = agent_chain.run(user_message)
         except Exception as e:
             ai_response = f"Error running web search: {str(e)}"
     else:
@@ -461,32 +460,6 @@ def get_text_from_content(content):
     if isinstance(content, list):
         return " ".join(item.get("text", "") for item in content if isinstance(item, dict))
     return content
-
-def invoke_claude_bedrock(web_response):
-    messages = [{"role": "user", "content": web_response}]
-
-    payload = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 4000,
-        "messages": messages  # Include full chat history
-    }
-
-    response = bedrock.invoke_model(
-        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
-        contentType="application/json",
-        accept="application/json",
-        body=json.dumps(payload)
-    )
-
-    response_body = response["body"].read().decode("utf-8")
-    result = json.loads(response_body)
-
-    if "content" in result and isinstance(result["content"], list):
-        extracted_text = "\n".join(item["text"] for item in result["content"] if item["type"] == "text")
-    else:
-        extracted_text = "No valid response from Claude."
-
-    return extracted_text
 
 ### ✅ Claude AI Invocation ###
 def invoke_claude_bedrock(content, chat_memory):
