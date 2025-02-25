@@ -413,7 +413,14 @@ def chat():
 
         # Run the agent with user input
         try:
-            ai_response = agent_chain.run(user_message)
+            response = agent_chain.invoke(user_message)
+
+            if isinstance(response, dict) and "output" in response:
+              ai_response = response["output"]
+            elif isinstance(response, str):  
+              ai_response = response  
+            else:
+              ai_response = str(response)
             observation = search.results(query)
             extracted_urls = extract_urls(observation)
             print(extracted_urls)
