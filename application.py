@@ -223,17 +223,31 @@ def process_file(file_path, file_type):
 
     return "Unsupported file type."
 
+import re
+
 def format_ai_response(response):
+    # Extract text if response is a dictionary
     if isinstance(response, dict):
-        # Try to extract the main message content (adjust the key as needed)
-        response_text = response.get("content", "")
+        response_text = response.get("output", response.get("content", ""))
         if not response_text:
-            response_text = str(response)  # Fallback: Convert full response to string
+            response_text = str(response)  # Convert entire response to string as fallback
     else:
         response_text = response  # Assume it's already a string
 
-    if not isinstance(response_text, str):
-        raise ValueError("Expected a string response, but got:", type(response_text))
+    # Split text into lines and format numbered sections in bold
+    lines = response_text.split("\n")
+    formatted_lines = []
+    for line in lines:
+        match = re.match(r'^(\d+.*?:)(.*)$', line.strip())  # Detect numbered sections
+        if match:
+            bold_part = f"<b>{match.group(1)}</b>"
+            remaining_part = match.group(2)
+            formatted_lines.append(f"{bold_part}{remaining_part}")
+        else:
+            formatted_lines.append(line)
+
+    return "<br>".join(formatted_lines)
+
 
     lines = response_text.split("\n")
     formatted_lines = []
