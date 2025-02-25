@@ -827,6 +827,9 @@
                             <span class="tooltip">Upload files</span>
                         </button>
                     </div>
+                    <label for="web-search-toggle">
+                        <input type="checkbox" id="web-search-toggle"> Enable Web Search
+                    </label>
                 </div>
             <div class="hide">Upload file: docx, pptx, pdf, xlsx, jpeg, png, csv</div>
             <div class="file-info" id="fileInfo">
@@ -845,6 +848,9 @@ async function sendMessage() {
     const chatBox = document.getElementById('chat-box');
     const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
+
+    //Web Search
+    const webSearchEnabled = document.getElementById("web-search-toggle")?.checked || false;
 
     // Capture advanced AI settings
     const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
@@ -889,6 +895,7 @@ async function sendMessage() {
         if (fileInput.files.length > 0) {
             const formData = new FormData();
             formData.append("message", modifiedMessage); // Include modified message
+            formData.append("web_search_enabled", webSearchEnabled);
             //formData.append("writingStyle", selectedWritingStyle);
             //formData.append("quickPrompt", selectedQuickPrompt);
 
@@ -906,7 +913,7 @@ async function sendMessage() {
             response = await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: modifiedMessage })
+                body: JSON.stringify({ message: modifiedMessage, web_search_enabled: webSearchEnabled })
             });
         }
 
