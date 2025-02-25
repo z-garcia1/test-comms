@@ -295,6 +295,14 @@ def filter_history(history, dynamic_keywords):
     return [history[i] for i in selected_indexes]
 
 def get_llm():
+     try:
+        # Check AWS Bedrock connectivity
+        response = bedrock.list_models()
+        logging.debug(f"✅ AWS Bedrock connection successful: {response}")
+    except Exception as e:
+        logging.error(f"❌ AWS Bedrock connection failed: {e}")
+        raise e
+
     return ChatBedrock(
         client=bedrock,
         model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
