@@ -68,12 +68,6 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 # Disable logging
-app.logger.disabled = True
-log = logging.getLogger('werkzeug')
-log.disabled = True
-logging.basicConfig(handlers=[logging.NullHandler()])
-logging.getLogger().setLevel(logging.CRITICAL)
-logging.getLogger().disabled = True
 
 #chat_memory = []
 
@@ -591,4 +585,4 @@ def safe_search(query):
 
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
