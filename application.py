@@ -19,6 +19,15 @@ from bs4 import BeautifulSoup
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_core.rate_limiters import InMemoryRateLimiter
 import pdfplumber
+from langchain.utilities.tavily_search import TavilySearchAPIWrapper
+from langchain.tools.tavily_search import TavilySearchResults
+from langchain.agents import initialize_agent, AgentType
+from langchain_aws import ChatBedrock
+
+#Tavily
+os.environ["TAVILY_API_KEY"] = os.environ.get('SearchKey')
+search = TavilySearchAPIWrapper()
+tavily_tool = TavilySearchResults(api_wrapper=search)
 
 # AWS Bedrock client setup
 bedrock = boto3.client('bedrock-runtime', 
@@ -290,6 +299,13 @@ def filter_history(history, dynamic_keywords):
     
     return [history[i] for i in selected_indexes]
 
+def get_llm():
+    return ChatBedrock(
+        client=bedrock,
+        model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        temperature=1.0,
+        max_tokens=800
+    )
 
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
 @app.route("/chat", methods=["POST"])
@@ -297,6 +313,8 @@ def chat():
     """Handles user messages & file uploads, allowing text-only requests as well."""
     
     chat_memory = session.get('chat_memory', [])
+
+    web_search_enabled = request.json.get("web_search_enabled", False)  # Read toggle state
 
     # Check if the request contains JSON or form data
     if request.is_json:
@@ -370,8 +388,28 @@ def chat():
     # Store user input in chat memory before invoking Claude
     chat_memory.append({"role": "user", "content": user_message})
 
+    # If web search is enabled, perform a search
+    llm = get_llm()
+    if web_search_enabled:
+        agent_chain = initialize_agent(
+            [tavily_tool],  # Tavily Search Tool
+            llm=llm,  # Claude AI
+            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+            verbose=True
+        )
+
+        # Run the agent with user input
+        try:
+            web_response = agent_chain.run(user_message)
+            ai_response = invoke_claude_bedrock(web_response)
+        except Exception as e:
+            ai_response = f"Error running web search: {str(e)}"
+    else:
+        # Invoke Claude directly without search
+        ai_response = invoke_claude_bedrock(content, chat_memory)
+
     # Invoke Claude AI for processing
-    ai_response = invoke_claude_bedrock(content, chat_memory)
+    #ai_response = invoke_claude_bedrock(content, chat_memory)
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
@@ -423,6 +461,32 @@ def get_text_from_content(content):
     if isinstance(content, list):
         return " ".join(item.get("text", "") for item in content if isinstance(item, dict))
     return content
+
+def invoke_claude_bedrock(web_response):
+    messages = [{"role": "user", "content": web_response}]
+
+    payload = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 4000,
+        "messages": messages  # Include full chat history
+    }
+
+    response = bedrock.invoke_model(
+        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps(payload)
+    )
+
+    response_body = response["body"].read().decode("utf-8")
+    result = json.loads(response_body)
+
+    if "content" in result and isinstance(result["content"], list):
+        extracted_text = "\n".join(item["text"] for item in result["content"] if item["type"] == "text")
+    else:
+        extracted_text = "No valid response from Claude."
+
+    return extracted_text
 
 ### ✅ Claude AI Invocation ###
 def invoke_claude_bedrock(content, chat_memory):
