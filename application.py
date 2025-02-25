@@ -505,7 +505,7 @@ def invoke_claude_bedrock(content, chat_memory):
         body=json.dumps(payload)
     )
 
-    response_body = response["body"].read().decode("utf-8")
+    response_body = response["Body"].read().decode("utf-8")
     result = json.loads(response_body)
 
     if "content" in result and isinstance(result["content"], list):
