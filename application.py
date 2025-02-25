@@ -86,6 +86,8 @@ def home():
         return redirect("/login")
     return render_template("acknowledge.html")
 
+PUBLIC_ROUTES = {"/chat", "/reset_chat"}
+
 @app.route("/login")
 def login():
     # Redirect the user to the TI login page
