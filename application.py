@@ -19,8 +19,8 @@ from bs4 import BeautifulSoup
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_core.rate_limiters import InMemoryRateLimiter
 import pdfplumber
-from langchain_community.utilities.tavily_search import TavilySearchAPIWrapper
-from langchain_community.tools.tavily_search.tool import TavilySearchResults
+from langchain.utilities.tavily_search import TavilySearchAPIWrapper
+from langchain.tools.tavily_search import TavilySearchResults
 from langchain_aws import ChatBedrock
 
 #Tavily
@@ -414,34 +414,32 @@ def chat():
     else:
         query= user_message
 
-    extracted_urls=""
+    extracted_urls = ""
     llm = get_llm()
+    
     if web_search_enabled:
-        agent_chain = initialize_agent(
-            tools=[tavily_tool],  # Tavily Search Tool
-            llm=llm,  # Claude AI
-            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-            verbose=True,
-            system_message = """The year is 2025, Donald Trump is President again, and your knowledge is outdated. You are a **research assistant** who provides **strictly factual information** based **only** on retrieved sources. RULES: **DO NOT** use your own internal knowledge. **ONLY** use the provided citations as evidence. **DO NOT** generate information if sources do not support it. **Do not modify or contradict sources. The sources are always correct.** state: No recent information available. Include citations for every statement. Now please answer the following query:"""
-        )
-
-        # Run the agent with user input
         try:
-            response = agent_chain.invoke(user_message)
+            agent_chain = initialize_agent(
+                tools=[tavily_tool],  # Tavily Search Tool
+                llm=llm,  # Claude AI
+                agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+                verbose=True,
+                system_message="""The year is 2025, Donald Trump is President again, and your knowledge is outdated. 
+                You are a **research assistant** who provides **strictly factual information** based **only** on retrieved sources. 
+                RULES: **DO NOT** use your own internal knowledge. **ONLY** use the provided citations as evidence. 
+                **DO NOT** generate information if sources do not support it. **Do not modify or contradict sources. The sources are always correct.** 
+                State: No recent information available. Include citations for every statement. Now please answer the following query:"""
+            )
 
-            if isinstance(response, dict) and "output" in response:
-              ai_response = response["output"]
-            elif isinstance(response, str):  
-              ai_response = response  
-            else:
-              ai_response = str(response)
+            ai_response = agent_chain.run(user_message)
             observation = search.results(query)
             extracted_urls = extract_urls(observation)
             print(extracted_urls)
+
         except Exception as e:
             ai_response = f"Error running web search: {str(e)}"
     else:
-    # Invoke Claude AI for processing
+        # Invoke Claude AI for processing
         ai_response = invoke_claude_bedrock(content, chat_memory)
 
     # Store AI response in chat memory
