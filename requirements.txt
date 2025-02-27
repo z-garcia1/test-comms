@@ -16,6 +16,6 @@ Pillow
 Flask-Session
 yake
 pdfplumber
-langchain
+langchain==0.3.17
 langchain-aws
 tavily-python
