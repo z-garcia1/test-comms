@@ -223,44 +223,19 @@ def process_file(file_path, file_type):
 
     return "Unsupported file type."
 
-import re
-
 def format_ai_response(response):
-    # Extract text if response is a dictionary
-    if isinstance(response, dict):
-        response_text = response.get("output", response.get("content", ""))
-        if not response_text:
-            response_text = str(response)  # Convert entire response to string as fallback
-    else:
-        response_text = response  # Assume it's already a string
-
-    # Split text into lines and format numbered sections in bold
-    lines = response_text.split("\n")
+    lines = response.split("\n")
     formatted_lines = []
     for line in lines:
-        match = re.match(r'^(\d+.*?:)(.*)$', line.strip())  # Detect numbered sections
+        match = re.match(r'^(\d+.*?:)(.*)$', line.strip())
         if match:
             bold_part = f"<b>{match.group(1)}</b>"
             remaining_part = match.group(2)
             formatted_lines.append(f"{bold_part}{remaining_part}")
         else:
             formatted_lines.append(line)
-
+    
     return "<br>".join(formatted_lines)
-
-
-    lines = response_text.split("\n")
-    formatted_lines = []
-    for line in lines:
-        match = re.match(r"(\*+)(.*)", line.strip())
-        if match:
-            bold_part = f"<b>{match.group(1)}</b>"
-            remaining_part = match.group(2)
-            formatted_lines.append(f"{bold_part}{remaining_part}")
-        else:
-            formatted_lines.append(line)
-    return "<br>".join(formatted_lines)
-
 
 import yake
 
@@ -347,7 +322,7 @@ def chat():
     if not user_message and not files:
         return jsonify({"error": "No input provided"}), 400
 
-    content = user_message if user_message else ""
+    content = [{"type": "text", "text": user_message}] if user_message else []
     text_from_files = []
 
     for file in files:
@@ -414,32 +389,27 @@ def chat():
     else:
         query= user_message
 
-    extracted_urls = ""
+    extracted_urls=""
     llm = get_llm()
-    
     if web_search_enabled:
-        try:
-            agent_chain = initialize_agent(
-                tools=[tavily_tool],  # Tavily Search Tool
-                llm=llm,  # Claude AI
-                agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-                verbose=True,
-                system_message="""The year is 2025, Donald Trump is President again, and your knowledge is outdated. 
-                You are a **research assistant** who provides **strictly factual information** based **only** on retrieved sources. 
-                RULES: **DO NOT** use your own internal knowledge. **ONLY** use the provided citations as evidence. 
-                **DO NOT** generate information if sources do not support it. **Do not modify or contradict sources. The sources are always correct.** 
-                State: No recent information available. Include citations for every statement. Now please answer the following query:"""
-            )
+        agent_chain = initialize_agent(
+            tools=[tavily_tool],  # Tavily Search Tool
+            llm=llm,  # Claude AI
+            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+            verbose=True,
+            system_message = """The year is 2025, Donald Trump is President again, and your knowledge is outdated. You are a **research assistant** who provides **strictly factual information** based **only** on retrieved sources. RULES: **DO NOT** use your own internal knowledge. **ONLY** use the provided citations as evidence. **DO NOT** generate information if sources do not support it. **Do not modify or contradict sources. The sources are always correct.** state: No recent information available. Include citations for every statement. Now please answer the following query:"""
+        )
 
+        # Run the agent with user input
+        try:
             ai_response = agent_chain.run(user_message)
             observation = search.results(query)
             extracted_urls = extract_urls(observation)
             print(extracted_urls)
-
         except Exception as e:
             ai_response = f"Error running web search: {str(e)}"
     else:
-        # Invoke Claude AI for processing
+    # Invoke Claude AI for processing
         ai_response = invoke_claude_bedrock(content, chat_memory)
 
     # Store AI response in chat memory
@@ -454,7 +424,7 @@ def chat():
         "response": f"""<br><br><div><pre>{formatted_response}</pre>{'<br>'.join(extracted_urls) if extracted_urls else ""}<br><br>
                         <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
     })
-
+  
 @app.route("/reset_chat", methods=["POST"])
 def reset_chat():
     session['chat_memory'] = []
