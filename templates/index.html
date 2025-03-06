@@ -848,9 +848,8 @@ async function sendMessage() {
     const chatBox = document.getElementById('chat-box');
     const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
-
     const webSearchEnabled = document.getElementById("web-search-toggle")?.checked || false;
-    
+
     if (!userMessage) {
         alert("Please enter a message.");
         return;
@@ -861,14 +860,11 @@ async function sendMessage() {
     userMessageElement.className = 'chat-message user';
     userMessageElement.textContent = userMessage;
     chatBox.appendChild(userMessageElement);
-
-    // Clear input
     userInput.value = '';
 
-    // Add loading spinner
+    // Add loading indicator
     const spinner = document.createElement("div");
     spinner.className = "spinner";
-    spinner.style.display = 'block';
     chatBox.appendChild(spinner);
     chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -876,7 +872,7 @@ async function sendMessage() {
         let response;
         let isStreaming = !webSearchEnabled;
 
-        // Send request
+        // ✅ Send request (Ensure `fetch` is streaming)
         response = await fetch("/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -887,7 +883,7 @@ async function sendMessage() {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
 
-        // Remove spinner before streaming starts
+        // ✅ Remove spinner before streaming starts
         spinner.remove();
 
         // ✅ Handle Web Search Response (Non-Streaming)
@@ -907,6 +903,8 @@ async function sendMessage() {
         aiMessageElement.className = "chat-message ai";
         chatBox.appendChild(aiMessageElement);
 
+        let accumulatedText = ""; // Store streamed content
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -915,7 +913,8 @@ async function sendMessage() {
             if (chunk.startsWith("data: ")) {
                 try {
                     const parsed = JSON.parse(chunk.replace("data: ", ""));
-                    aiMessageElement.innerHTML += parsed.text + " ";
+                    accumulatedText += parsed.text + " ";  // ✅ Update message gradually
+                    aiMessageElement.innerHTML = accumulatedText;
                     chatBox.scrollTop = chatBox.scrollHeight;
                 } catch (err) {
                     console.error("Error parsing JSON chunk:", err);
