@@ -849,34 +849,20 @@ async function sendMessage() {
     const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
 
-    // Web Search
     const webSearchEnabled = document.getElementById("web-search-toggle")?.checked || false;
-
-    // Capture advanced AI settings
-    const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
-    const temperature = document.getElementById("temperature")?.value || "0.7";
-    const topP = document.getElementById("topP")?.value || "0.9";
-    const topK = document.getElementById("topK")?.value || "50";
-
-    // Ensure at least one input (text or file) is provided
-    if (userMessage === "" && fileInput.files.length === 0) {
-        alert("Please enter a message or upload a file before sending.");
+    
+    if (!userMessage) {
+        alert("Please enter a message.");
         return;
     }
 
-    // Construct hidden AI settings prompt and modified message
-    let hiddenPrompt = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
-    const modifiedMessage = hiddenPrompt + userMessage;
+    // Display user message
+    const userMessageElement = document.createElement('div');
+    userMessageElement.className = 'chat-message user';
+    userMessageElement.textContent = userMessage;
+    chatBox.appendChild(userMessageElement);
 
-    // Display user message in chat if available
-    if (userMessage) {
-        const userMessageElement = document.createElement('div');
-        userMessageElement.className = 'chat-message user';
-        userMessageElement.textContent = userMessage;
-        chatBox.appendChild(userMessageElement);
-    }
-
-    // Clear input fields before processing
+    // Clear input
     userInput.value = '';
 
     // Add loading spinner
@@ -884,61 +870,37 @@ async function sendMessage() {
     spinner.className = "spinner";
     spinner.style.display = 'block';
     chatBox.appendChild(spinner);
-
-    // Ensure chat scrolls to the bottom
     chatBox.scrollTop = chatBox.scrollHeight;
 
     try {
         let response;
-        let isStreaming = !webSearchEnabled; // Only stream if web search is not enabled
+        let isStreaming = !webSearchEnabled;
 
-        // Check if files are attached
-        if (fileInput.files.length > 0) {
-            const formData = new FormData();
-            formData.append("message", modifiedMessage);
-            formData.append("web_search_enabled", webSearchEnabled);
-
-            for (let i = 0; i < fileInput.files.length; i++) {
-                formData.append("file", fileInput.files[i]);
-            }
-
-            response = await fetch("/chat", {
-                method: "POST",
-                body: formData
-            });
-
-            isStreaming = false; // Files do not support streaming in this setup
-        } else {
-            // Text-only request
-            response = await fetch("/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: modifiedMessage, web_search_enabled: webSearchEnabled })
-            });
-        }
+        // Send request
+        response = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: userMessage, web_search_enabled: webSearchEnabled })
+        });
 
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
 
-        // Remove the spinner before streaming starts
+        // Remove spinner before streaming starts
         spinner.remove();
 
-        // If response is NOT streaming (Web Search or File Upload)
+        // ✅ Handle Web Search Response (Non-Streaming)
         if (!isStreaming) {
             const data = await response.json();
-            if (data.response) {
-                const aiMessageElement = document.createElement("div");
-                aiMessageElement.className = "chat-message ai";
-                aiMessageElement.innerHTML = data.response;
-                chatBox.appendChild(aiMessageElement);
-            } else {
-                throw new Error("Empty response from server.");
-            }
+            const aiMessageElement = document.createElement("div");
+            aiMessageElement.className = "chat-message ai";
+            aiMessageElement.innerHTML = data.response;
+            chatBox.appendChild(aiMessageElement);
             return;
         }
 
-        // ✅ Handle streaming response
+        // ✅ Handle Streaming Response
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         const aiMessageElement = document.createElement("div");
@@ -960,6 +922,7 @@ async function sendMessage() {
                 }
             }
         }
+
     } catch (error) {
         spinner.remove();
         console.error("Error:", error);
@@ -970,13 +933,9 @@ async function sendMessage() {
         chatBox.appendChild(errorMessageElement);
     }
 
-    // Clear file input
-    fileInput.value = "";
-    document.getElementById('fileInfo').style.display = "none";
-
-    // Scroll to the bottom after response
     chatBox.scrollTop = chatBox.scrollHeight;
 }
+
     
 document.addEventListener("DOMContentLoaded", function () {
     let selectedFiles = []; // Store selected files
