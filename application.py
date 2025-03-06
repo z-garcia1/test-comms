@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify, redirect, session
+from flask import Flask, request, render_template, jsonify, redirect, session, Response
 from flask_session import Session
 import boto3
 import json
@@ -302,56 +302,55 @@ def extract_urls(observation):
         return ["Error extracting URLs"]
 
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
+def invoke_claude_bedrock_stream(content, chat_memory):
+    """Streams Claude's responses via AWS Bedrock."""
+    full_history = chat_memory + [{"role": "user", "content": content}]
+    
+    payload = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 4000,
+        "messages": full_history,
+        "stream": True  # Enable streaming
+    }
+
+    response = bedrock.invoke_model_with_response_stream(
+        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps(payload)
+    )
+
+    def generate():
+        for event in response.get("body"):
+            chunk = json.loads(event["chunk"]["bytes"])
+            text = chunk.get("text", "").strip()
+            if text:
+                yield f"data: {json.dumps({'text': text})}\n\n"
+
+    return generate()
+
+# ✅ Updated `/chat` route with Streaming
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Handles user messages & file uploads, allowing text-only requests as well."""
-    from langchain.agents import initialize_agent, AgentType
-    
+    """Handles user messages, file uploads, and streams Claude AI responses."""
     chat_memory = session.get('chat_memory', [])
 
+    # 1️⃣ Process user input
+    user_message = request.json.get("message", "").strip()
     web_search_enabled = request.json.get("web_search_enabled", False)  # Read toggle state
 
-    # Check if the request contains JSON or form data
-    if request.is_json:
-        user_message = request.json.get("message", "").strip()
-    else:
-        user_message = request.form.get("message", "").strip()
-
-    files = request.files.getlist("file")  # Allow multiple file uploads
-
-    if not user_message and not files:
+    if not user_message:
         return jsonify({"error": "No input provided"}), 400
 
-    content = [{"type": "text", "text": user_message}] if user_message else []
+    content = [{"type": "text", "text": user_message}]
+    chat_memory.append({"role": "user", "content": user_message})
+
+    # 2️⃣ Process file uploads
+    files = request.files.getlist("file")
     text_from_files = []
 
     for file in files:
         file_ext = file.filename.split(".")[-1].lower()
-
-        # Ensure only one image file is uploaded at a time
-        image_files = [file for file in files if file.filename.split(".")[-1].lower() in ["png", "jpeg", "jpg"]]
-        if len(image_files) > 1:
-            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
-
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(file_path)
-
-            try:
-                # Convert image to Base64 for AI processing
-                image_base64 = convert_image_to_base64(file_path)
-                content.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": f"image/{file_ext}",
-                        "data": image_base64
-                    }
-                })
-            finally:
-                os.remove(file_path)  # Cleanup image
-            continue  # Skip text processing for images
-
         if file_ext not in ALLOWED_EXTENSIONS:
             return jsonify({"error": f"Invalid file type: {file_ext}"}), 400
 
@@ -360,70 +359,64 @@ def chat():
         file.save(file_path)
 
         try:
-            # Extract text from supported document types
-            text = process_file(file_path, file_ext)
-            if text:
-                text_from_files.append(text)
+            extracted_text = process_file(file_path, file_ext)
+            if extracted_text:
+                text_from_files.append(extracted_text)
         finally:
-            os.remove(file_path)  # Cleanup document
+            os.remove(file_path)  # Cleanup file after processing
 
     # Combine extracted text from all documents
-    combined_text = "\n\n".join(text_from_files)
-
-    # Ensure text fits within Claude's context window (~200K tokens)
-    if len(combined_text) > 800_000:  # Approx. 200K tokens
-        combined_text = combined_text[:800_000]  # Trim excess text
-
-    if combined_text:
-        chat_memory.append({"role": "user", "content": combined_text})
-    
-    if combined_text:
+    if text_from_files:
+        combined_text = "\n\n".join(text_from_files)
         content.append({"type": "text", "text": combined_text})
+        chat_memory.append({"role": "user", "content": combined_text})
 
-    # Store user input in chat memory before invoking Claude
-    chat_memory.append({"role": "user", "content": user_message})
-
-    # If web search is enabled, perform a search
-    if user_message.startswith("System"):
-        query = user_message.split("\n\n", 1)[-1].strip()
-    else:
-        query= user_message
-
-    extracted_urls=""
-    llm = get_llm()
+    # 3️⃣ Web Search (if enabled)
+    extracted_urls = ""
     if web_search_enabled:
+        llm = ChatBedrock(client=bedrock, model_id="anthropic.claude-3-5-sonnet-20240620-v1:0", max_tokens=800)
+        
         agent_chain = initialize_agent(
             tools=[tavily_tool],  # Tavily Search Tool
-            llm=llm,  # Claude AI
+            llm=llm,
             agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
             verbose=True,
-            system_message = """The year is 2025, Donald Trump is President again, and your knowledge is outdated. You are a **research assistant** who provides **strictly factual information** based **only** on retrieved sources. RULES: **DO NOT** use your own internal knowledge. **ONLY** use the provided citations as evidence. **DO NOT** generate information if sources do not support it. **Do not modify or contradict sources. The sources are always correct.** state: No recent information available. Include citations for every statement. Now please answer the following query:"""
+            system_message="""
+            The year is 2025, Donald Trump is President again, and your knowledge is outdated.
+            You are a **research assistant** who provides **strictly factual information** based **only** on retrieved sources.
+            RULES:
+            - **DO NOT** use your own internal knowledge.
+            - **ONLY** use the provided citations as evidence.
+            - **DO NOT** generate information if sources do not support it.
+            - **Do not modify or contradict sources. The sources are always correct.** 
+            If no sources are available, state: "No recent information available."
+            Include citations for every statement.
+            """
         )
 
-        # Run the agent with user input
         try:
             ai_response = agent_chain.run(user_message)
-            observation = search.results(query)
-            extracted_urls = extract_urls(observation)
-            print(extracted_urls)
+            observation = search.results(user_message)
+            extracted_urls = [item["url"] for item in observation.get("results", []) if "url" in item]
+
         except Exception as e:
             ai_response = f"Error running web search: {str(e)}"
-    else:
-    # Invoke Claude AI for processing
-        ai_response = invoke_claude_bedrock(content, chat_memory)
 
-    # Store AI response in chat memory
-    chat_memory.append({"role": "assistant", "content": ai_response})
+        # Store web search results in memory
+        chat_memory.append({"role": "assistant", "content": ai_response})
+        session['chat_memory'] = chat_memory
 
-  # Format the response for display
-    formatted_response = format_ai_response(ai_response)
+        # Return response (not streamed)
+        return jsonify({
+            "response": f"""<br><br><div><pre>{ai_response}</pre>{'<br>'.join(extracted_urls) if extracted_urls else ""}<br><br>
+                            <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
+        })
 
-    print("Response: 200")
-    session['chat_memory'] = chat_memory
-    return jsonify({
-        "response": f"""<br><br><div><pre>{formatted_response}</pre>{'<br>'.join(extracted_urls) if extracted_urls else ""}<br><br>
-                        <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
-    })
+    # Stream the response
+    return Response(
+        invoke_claude_bedrock_stream(content, chat_memory),
+        content_type="text/event-stream"
+    )
   
 @app.route("/reset_chat", methods=["POST"])
 def reset_chat():
