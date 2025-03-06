@@ -890,6 +890,7 @@ async function sendMessage() {
 
     try {
         let response;
+        let isStreaming = !webSearchEnabled; // Only stream if web search is not enabled
 
         // Check if files are attached
         if (fileInput.files.length > 0) {
@@ -897,7 +898,6 @@ async function sendMessage() {
             formData.append("message", modifiedMessage);
             formData.append("web_search_enabled", webSearchEnabled);
 
-            // Append each selected file to the FormData object
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append("file", fileInput.files[i]);
             }
@@ -906,8 +906,10 @@ async function sendMessage() {
                 method: "POST",
                 body: formData
             });
+
+            isStreaming = false; // Files do not support streaming in this setup
         } else {
-            // Text-only request (for streaming)
+            // Text-only request
             response = await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -922,14 +924,26 @@ async function sendMessage() {
         // Remove the spinner before streaming starts
         spinner.remove();
 
-        // Create an AI response container
+        // If response is NOT streaming (Web Search or File Upload)
+        if (!isStreaming) {
+            const data = await response.json();
+            if (data.response) {
+                const aiMessageElement = document.createElement("div");
+                aiMessageElement.className = "chat-message ai";
+                aiMessageElement.innerHTML = data.response;
+                chatBox.appendChild(aiMessageElement);
+            } else {
+                throw new Error("Empty response from server.");
+            }
+            return;
+        }
+
+        // ✅ Handle streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
         const aiMessageElement = document.createElement("div");
         aiMessageElement.className = "chat-message ai";
         chatBox.appendChild(aiMessageElement);
-
-        // Handle streaming response
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
 
         while (true) {
             const { done, value } = await reader.read();
@@ -940,13 +954,12 @@ async function sendMessage() {
                 try {
                     const parsed = JSON.parse(chunk.replace("data: ", ""));
                     aiMessageElement.innerHTML += parsed.text + " ";
-                    chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll
+                    chatBox.scrollTop = chatBox.scrollHeight;
                 } catch (err) {
                     console.error("Error parsing JSON chunk:", err);
                 }
             }
         }
-
     } catch (error) {
         spinner.remove();
         console.error("Error:", error);
