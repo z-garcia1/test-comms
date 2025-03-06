@@ -849,7 +849,7 @@ async function sendMessage() {
     const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
 
-    //Web Search
+    // Web Search
     const webSearchEnabled = document.getElementById("web-search-toggle")?.checked || false;
 
     // Capture advanced AI settings
@@ -894,10 +894,8 @@ async function sendMessage() {
         // Check if files are attached
         if (fileInput.files.length > 0) {
             const formData = new FormData();
-            formData.append("message", modifiedMessage); // Include modified message
+            formData.append("message", modifiedMessage);
             formData.append("web_search_enabled", webSearchEnabled);
-            //formData.append("writingStyle", selectedWritingStyle);
-            //formData.append("quickPrompt", selectedQuickPrompt);
 
             // Append each selected file to the FormData object
             for (let i = 0; i < fileInput.files.length; i++) {
@@ -909,7 +907,7 @@ async function sendMessage() {
                 body: formData
             });
         } else {
-            // Text-only request
+            // Text-only request (for streaming)
             response = await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -921,35 +919,52 @@ async function sendMessage() {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
 
-        const data = await response.json();
-
-        // Remove the spinner
+        // Remove the spinner before streaming starts
         spinner.remove();
 
-        if (data.response) {
-            const aiMessageElement = document.createElement("div");
-            aiMessageElement.className = "chat-message ai";
-            aiMessageElement.innerHTML = data.response;
-            chatBox.appendChild(aiMessageElement);
-        } else {
-            throw new Error("Empty response from server.");
+        // Create an AI response container
+        const aiMessageElement = document.createElement("div");
+        aiMessageElement.className = "chat-message ai";
+        chatBox.appendChild(aiMessageElement);
+
+        // Handle streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true }).trim();
+            if (chunk.startsWith("data: ")) {
+                try {
+                    const parsed = JSON.parse(chunk.replace("data: ", ""));
+                    aiMessageElement.innerHTML += parsed.text + " ";
+                    chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll
+                } catch (err) {
+                    console.error("Error parsing JSON chunk:", err);
+                }
+            }
         }
+
     } catch (error) {
         spinner.remove();
         console.error("Error:", error);
-        
+
         const errorMessageElement = document.createElement("div");
         errorMessageElement.className = "chat-message ai error";
         errorMessageElement.textContent = `Error: ${error.message}`;
         chatBox.appendChild(errorMessageElement);
     }
-    //clear file
+
+    // Clear file input
     fileInput.value = "";
     document.getElementById('fileInfo').style.display = "none";
+
     // Scroll to the bottom after response
     chatBox.scrollTop = chatBox.scrollHeight;
 }
-
+    
 document.addEventListener("DOMContentLoaded", function () {
     let selectedFiles = []; // Store selected files
     let useWeb = false; // Track web search status
