@@ -935,6 +935,52 @@ async function sendMessage() {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+// Save chat as PDF
+    document.getElementById("save-pdf").addEventListener("click", function () {
+        let chatBox = document.getElementById("chat-box").innerHTML; // Get chat HTML content
+        fetch("/save_chat_pdf", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_html: chatBox })
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            let url = window.URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = "chat_history.pdf";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+    });
+
+    // Upload PDF and extract chat memory
+    document.getElementById("upload-button").addEventListener("click", function () {
+        let fileInput = document.getElementById("upload-pdf");
+        let file = fileInput.files[0];
+        if (!file) {
+            alert("Please select a PDF file to upload.");
+            return;
+        }
+
+        let formData = new FormData();
+        formData.append("file", file);
+
+        fetch("/upload_chat_pdf", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Chat history restored.");
+                location.reload();
+            } else {
+                alert("Error restoring chat.");
+            }
+        });
+    });
     
 document.addEventListener("DOMContentLoaded", function () {
     let selectedFiles = []; // Store selected files
