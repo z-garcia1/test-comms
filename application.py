@@ -23,6 +23,58 @@ from langchain.utilities.tavily_search import TavilySearchAPIWrapper
 from langchain.tools.tavily_search import TavilySearchResults
 from langchain_aws import ChatBedrock
 
+from fpdf import FPDF
+import fitz  # PyMuPDF for PDF extraction
+
+@app.route("/save_chat_pdf", methods=["POST"])
+def save_chat_pdf():
+    """Saves chat history as a PDF with HTML formatting."""
+    data = request.json
+    chat_html = data.get("chat_html", "")
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+
+    # Convert HTML to plain text for simplicity
+    soup = BeautifulSoup(chat_html, "html.parser")
+    chat_text = soup.get_text()
+
+    pdf.multi_cell(0, 10, chat_text)
+
+    pdf_output = "chat_history.pdf"
+    pdf.output(pdf_output)
+
+    return send_file(pdf_output, as_attachment=True)
+
+
+@app.route("/upload_chat_pdf", methods=["POST"])
+def upload_chat_pdf():
+    """Processes uploaded PDF and restores chat memory."""
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["file"]
+    if not file.filename.endswith(".pdf"):
+        return jsonify({"error": "Invalid file type. Please upload a PDF."}), 400
+
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], "uploaded_chat.pdf")
+    file.save(file_path)
+
+    try:
+        # Extract text from the uploaded PDF
+        doc = fitz.open(file_path)
+        chat_text = "\n".join(page.get_text() for page in doc).strip()
+        
+        # Restore chat memory
+        session["chat_memory"] = [{"role": "user", "content": chat_text}]
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 #Tavily
 os.environ["TAVILY_API_KEY"] = os.environ.get('SearchKey')
 search = TavilySearchAPIWrapper()
