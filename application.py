@@ -636,6 +636,36 @@ def export_chat_txt():
         headers={"Content-Disposition": "attachment; filename=chat_history.txt"}
     )
 
+@app.route("/upload-chat-txt", methods=["POST"])
+def upload_chat_txt():
+    """Allows users to upload a chat_history.txt file and restore chat_memory to the chat box."""
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["file"]
+
+    # Ensure it's a text file
+    if not file.filename.endswith(".txt"):
+        return jsonify({"error": "Invalid file type. Please upload a .txt file"}), 400
+
+    try:
+        # Read the file content
+        file_content = file.read().decode("utf-8")
+        
+        # Convert JSON text back to Python list
+        restored_chat = json.loads(file_content)
+
+        # Save restored chat in session
+        session["chat_memory"] = restored_chat
+
+        # Return chat history as JSON for the frontend
+        return jsonify({"success": "Chat history restored successfully!", "chat_memory": restored_chat}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to process file: {str(e)}"}), 500
+
+
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
     app.run(debug=True)
