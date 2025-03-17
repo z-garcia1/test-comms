@@ -1271,6 +1271,46 @@ document.querySelectorAll('#writingStyle-options .dropdown-option').forEach(opti
 
         adjustHeight();
     });
+    // Boolean state variables
+let isExtractSessionOpen = false;
+let isToolboxOpen = false;
+
+// Get elements
+const extractSessionDiv = document.getElementById("extract-session-div");
+const toolboxDiv = document.getElementById("open-toolbox-div");
+const extractButton = document.getElementById("extract-button");
+const toolboxButton = document.getElementById("toolbox-button");
+
+// Toggle extract session dropdown
+function toggleExtractSession(event) {
+    event.stopPropagation(); // Prevent click from bubbling up
+    isExtractSessionOpen = !isExtractSessionOpen; // Toggle state
+    extractSessionDiv.classList.toggle("active", isExtractSessionOpen);
+}
+
+// Toggle toolbox dropdown
+function toggleOpenToolbox(event) {
+    event.stopPropagation(); // Prevent click from bubbling up
+    isToolboxOpen = !isToolboxOpen; // Toggle state
+    toolboxDiv.classList.toggle("active", isToolboxOpen);
+}
+
+// Click event to close dropdowns when clicking outside
+document.addEventListener("click", () => {
+    if (isExtractSessionOpen) {
+        extractSessionDiv.classList.remove("active");
+        isExtractSessionOpen = false;
+    }
+    if (isToolboxOpen) {
+        toolboxDiv.classList.remove("active");
+        isToolboxOpen = false;
+    }
+});
+
+// Attach event listeners to buttons
+extractButton.addEventListener("click", toggleExtractSession);
+toolboxButton.addEventListener("click", toggleOpenToolbox);
+
 </script>
 </body>
 </html>
