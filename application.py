@@ -613,6 +613,29 @@ def safe_search(query):
     response = search_tool.invoke(query)
     return response
 
+@app.route("/export-chat-txt", methods=["GET"])
+def export_chat_txt():
+    """Generates a TXT file of chat history and returns it as a downloadable file."""
+
+    chat_memory = session.get("chat_memory", [])
+
+    if not chat_memory:
+        return "No chat history found", 404
+
+    # Format chat history
+    chat_text = "Chat History\n\n"
+    for message in chat_memory:
+        role = "User" if message["role"] == "user" else "Assistant"
+        text = message["content"]
+        chat_text += f"{role}: {text}\n\n"
+
+    # Send the file as a downloadable response
+    return Response(
+        chat_text,
+        mimetype="text/plain",
+        headers={"Content-Disposition": "attachment; filename=chat_history.txt"}
+    )
+
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
     app.run(debug=True)
