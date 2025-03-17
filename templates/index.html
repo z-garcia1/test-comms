@@ -1331,7 +1331,61 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+async function uploadChatHistory() {
+    const fileInput = document.getElementById("upload-chat-file");
+    const file = fileInput.files[0];
+    const chatBox = document.getElementById("chat-box");
 
+    if (!file) {
+        alert("Please select a file to upload.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const response = await fetch("/upload-chat-txt", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to restore chat history.");
+        }
+
+        alert("Chat history restored successfully!");
+
+        // ✅ Clear the chat box before inserting new messages
+        chatBox.innerHTML = "";
+
+        // ✅ Loop through restored messages and insert into chat box
+        data.chat_memory.forEach(message => {
+            const messageElement = document.createElement("div");
+            messageElement.className = `chat-message ${message.role === "user" ? "user" : "ai"}`;
+            
+            // ✅ Ensure AI messages support innerHTML for rich formatting
+            if (message.role === "assistant") {
+                messageElement.innerHTML = message.content;
+            } else {
+                messageElement.textContent = message.content;
+            }
+
+            chatBox.appendChild(messageElement);
+        });
+
+        // ✅ Scroll to the bottom
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+    } catch (error) {
+        console.error("Error uploading chat:", error);
+        alert("Error restoring chat: " + error.message);
+    }
+}
+
+    
 </script>
 </body>
 </html>
