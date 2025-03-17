@@ -1307,24 +1307,21 @@ document.addEventListener("click", () => {
     }
 });
 
-// Attach event listeners to buttons
-extractButton.addEventListener("click", toggleExtractSession);
-toolboxButton.addEventListener("click", toggleOpenToolbox);
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelector(".export-text-container").addEventListener("click", function () {
-        fetch("/export-chat", { method: "GET" }) // Request PDF from backend
+        fetch("/export-chat-txt", { method: "GET" }) // Request TXT file from backend
             .then(response => {
                 if (!response.ok) {
-                    throw new Error("Failed to download PDF");
+                    throw new Error("Failed to download chat history");
                 }
                 return response.blob();
             })
             .then(blob => {
-                // Create a downloadable link for the PDF
+                // Create a downloadable link for the TXT file
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = "chat_history.pdf";
+                a.download = "chat_history.txt";
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -1333,6 +1330,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .catch(error => console.error("Error exporting chat:", error));
     });
 });
+
 
 </script>
 </body>
