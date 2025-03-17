@@ -1310,6 +1310,29 @@ document.addEventListener("click", () => {
 // Attach event listeners to buttons
 extractButton.addEventListener("click", toggleExtractSession);
 toolboxButton.addEventListener("click", toggleOpenToolbox);
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelector(".export-text-container").addEventListener("click", function () {
+        fetch("/export-chat", { method: "GET" }) // Request PDF from backend
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to download PDF");
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create a downloadable link for the PDF
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "chat_history.pdf";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => console.error("Error exporting chat:", error));
+    });
+});
 
 </script>
 </body>
