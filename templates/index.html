@@ -386,7 +386,8 @@
         cursor: pointer;
         }
         .copy-button:hover {
-        background-color: #1f6faa;
+        background-color: gray;
+        color: white;
         }
         /* Tooltip styling */
 .tooltip {
@@ -715,6 +716,124 @@
 .no-margin{
     margin-bottom: 0px !important;
 }
+#export-session-button{
+    cursor: pointer;
+    background-color: #E6E6E6;
+        color: #5D5D5D;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 5px;
+        position: absolute;
+        z-index: 10;
+}
+#export-session-button:hover{
+    background-color: gray;
+    color: white;
+}
+.import-session-button{
+    cursor: pointer;
+    background-color: #E6E6E6;
+        color: #5D5D5D;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 5px;
+        position: absolute;
+        z-index: 10;
+        margin-left: 85px;
+}
+.import-session-button:hover{
+    background-color: gray;
+    color: white;
+}
+#extract-session-div{
+    display: none;
+    background-color: #192338;
+    max-width: fit-content;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    position: relative;
+    top: 25px;
+}
+.export-session-pop-button{
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+.export-session-pop-button:hover{
+    background-color: #2d3d5e;
+}
+.icon-container{
+    padding: 8px;
+    border-radius: 50%;
+    margin-top: 2px;
+    background-color: #f3f4f6;
+    align-content: center;
+    text-align: center;
+}
+.icon-container-image{
+    width: 20px;
+    height: 20px;
+    color: #374151;
+    font-size: medium;
+    justify-content: center;
+    align-content: center;
+}
+.export-text-container{
+    display: flex;
+    flex-direction: column;
+}
+.title-export{
+    font-weight: 600;
+    color: white;
+}
+.subtitle-export{
+    font-size: 0.875rem;
+    color: whitesmoke;
+}
+#open-toolbox-div{
+    display: none;
+    background-color: #cccccc;
+    max-width: 400px;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    z-index: 1;
+    position: absolute;
+    bottom: 5px;
+}
+.title-toolbox-section{
+    font-weight: 600;
+    color: black;
+}
+.subtitle-toolbox-section{
+    font-size: 0.875rem;
+    color: black;
+}
+.toolbox-pop-button{
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+.toolbox-pop-button:hover{
+    background-color: #b7b7b7;
+}
+#extract-session-div.active, #open-toolbox-div.active{
+    display: block !important;
+}
     </style>
 </head>
 <body>
@@ -810,7 +929,60 @@
     <div class="chat-container">
         <div class="top-pad"></div>
         <div class="chat-box" id="chat-box">
+            <div id="chat-controls">
+            <button id="export-session-button">Export&nbsp;&nbsp;<i class="fa-solid fa-download"></i></button>
+            <button class="import-session-button" id="importButton" onclick="uploadChatHistory()">Import&nbsp;&nbsp;<i class="fa-solid fa-braille"></i></button>
+            <input type="file" class="hide" id="upload-chat-file" accept=".txt">
+            <div id="extract-session-div">
+                <div>
+                    <button class="export-session-pop-button">
+                        <div class="icon-container">
+                            <div class="icon-container-image"><i class="fa-solid fa-braille"></i></div>
+                        </div>
+                        <div class="export-text-container">
+                            <span class="title-export">Memory file</span>
+                            <span class="subtitle-export">Save your session and restore it later</span>
+                        </div>
+                    </button>
+                </div>
+                <div>
+                    <button class="export-session-pop-button" style="width: 302px;">
+                        <div class="icon-container">
+                            <div class="icon-container-image"><i class="fa-solid fa-file-lines"></i></div>
+                        </div>
+                        <div class="export-text-container">
+                            <span class="title-export">PDF</span>
+                            <span class="subtitle-export">Share use cases</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <div id="open-toolbox-div">
+                <div>
+                    <button class="toolbox-pop-button">
+                        <div class="icon-container">
+                            <div class="icon-container-image"><i class="fa-solid fa-align-left"></i></div>
+                        </div>
+                        <div class="export-text-container">
+                            <span class="title-toolbox-section">Extract text</span>
+                            <span class="subtitle-toolbox-section">Get text from images or complex PDFs</span>
+                        </div>
+                    </button>
+                </div>
+                <div>
+                    <button class="toolbox-pop-button" style="width: 312px;">
+                        <div class="icon-container">
+                            <div class="icon-container-image"><i class="fa-solid fa-database"></i></div>
+                        </div>
+                        <div class="export-text-container">
+                            <span class="title-toolbox-section">Search TI database</span>
+                            <span class="subtitle-toolbox-section">Retrieve answers from TI documents</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
         </div>
+    </div>
         <div class="input-container">
             <div class="input-container-top">
                     <textarea id="user-input" placeholder="Type your message..."></textarea>
@@ -827,9 +999,21 @@
                             <span class="tooltip">Upload files</span>
                         </button>
                     </div>
-                    <label for="web-search-toggle">
-                        <input type="checkbox" id="web-search-toggle"> Enable Web Search
-                    </label>
+                     <div class="tooltip-container">
+                        <button class="file" id="open-toolbox-button"><i class="fa-solid fa-toolbox"></i>
+                            <span class="tooltip">Open toolbox</span>
+                        </button>
+                    </div>
+                    <div class="tooltip-container">
+                        <button class="file" onclick="toggleWebSearch()"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="black" stroke-width="2"/>
+                            <path d="M2 12H22" stroke="black" stroke-width="2"/>
+                            <path d="M12 2C14.5 5 15.5 7 15.5 12C15.5 17 14.5 19 12 22" stroke="black" stroke-width="2"/>
+                            <path d="M12 2C9.5 5 8.5 7 8.5 12C8.5 17 9.5 19 12 22" stroke="black" stroke-width="2"/>
+                          </svg></i>
+                            <span class="tooltip">Search the web</span>
+                        </button>
+                    </div>
                 </div>
             <div class="hide">Upload file: docx, pptx, pdf, xlsx, jpeg, png, csv</div>
             <div class="file-info" id="fileInfo">
@@ -848,140 +1032,104 @@ async function sendMessage() {
     const chatBox = document.getElementById('chat-box');
     const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
-    const webSearchEnabled = document.getElementById("web-search-toggle")?.checked || false;
 
-    if (!userMessage) {
-        alert("Please enter a message.");
+    // Capture advanced AI settings
+    const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
+    const temperature = document.getElementById("temperature")?.value || "0.7";
+    const topP = document.getElementById("topP")?.value || "0.9";
+    const topK = document.getElementById("topK")?.value || "50";
+
+    // Ensure at least one input (text or file) is provided
+    if (userMessage === "" && fileInput.files.length === 0) {
+        alert("Please enter a message or upload a file before sending.");
         return;
     }
 
-    // Display user message
-    const userMessageElement = document.createElement('div');
-    userMessageElement.className = 'chat-message user';
-    userMessageElement.textContent = userMessage;
-    chatBox.appendChild(userMessageElement);
+    // Construct hidden AI settings prompt and modified message
+    let hiddenPrompt = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
+    const modifiedMessage = hiddenPrompt + userMessage;
+
+    // Display user message in chat if available
+    if (userMessage) {
+        const userMessageElement = document.createElement('div');
+        userMessageElement.className = 'chat-message user';
+        userMessageElement.textContent = userMessage;
+        chatBox.appendChild(userMessageElement);
+    }
+
+    // Clear input fields before processing
     userInput.value = '';
 
-    // Add loading indicator
+    // Add loading spinner
     const spinner = document.createElement("div");
     spinner.className = "spinner";
+    spinner.style.display = 'block';
     chatBox.appendChild(spinner);
+
+    // Ensure chat scrolls to the bottom
     chatBox.scrollTop = chatBox.scrollHeight;
 
     try {
         let response;
-        let isStreaming = !webSearchEnabled;
 
-        // ✅ Send request (Ensure `fetch` is streaming)
-        response = await fetch("/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: userMessage, web_search_enabled: webSearchEnabled })
-        });
+        // Check if files are attached
+        if (fileInput.files.length > 0) {
+            const formData = new FormData();
+            formData.append("message", modifiedMessage); // Include modified message
+            //formData.append("writingStyle", selectedWritingStyle);
+            //formData.append("quickPrompt", selectedQuickPrompt);
+
+            // Append each selected file to the FormData object
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append("file", fileInput.files[i]);
+            }
+
+            response = await fetch("/chat", {
+                method: "POST",
+                body: formData
+            });
+        } else {
+            // Text-only request
+            response = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: modifiedMessage })
+            });
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
 
-        // ✅ Remove spinner before streaming starts
+        const data = await response.json();
+
+        // Remove the spinner
         spinner.remove();
 
-        // ✅ Handle Web Search Response (Non-Streaming)
-        if (!isStreaming) {
-            const data = await response.json();
+        if (data.response) {
             const aiMessageElement = document.createElement("div");
             aiMessageElement.className = "chat-message ai";
             aiMessageElement.innerHTML = data.response;
             chatBox.appendChild(aiMessageElement);
-            return;
+        } else {
+            throw new Error("Empty response from server.");
         }
-
-        // ✅ Handle Streaming Response
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        const aiMessageElement = document.createElement("div");
-        aiMessageElement.className = "chat-message ai";
-        chatBox.appendChild(aiMessageElement);
-
-        let accumulatedText = ""; // Store streamed content
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true }).trim();
-            if (chunk.startsWith("data: ")) {
-                try {
-                    const parsed = JSON.parse(chunk.replace("data: ", ""));
-                    accumulatedText += parsed.text + " ";  // ✅ Update message gradually
-                    aiMessageElement.innerHTML = accumulatedText;
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                } catch (err) {
-                    console.error("Error parsing JSON chunk:", err);
-                }
-            }
-        }
-
     } catch (error) {
         spinner.remove();
         console.error("Error:", error);
-
+        
         const errorMessageElement = document.createElement("div");
         errorMessageElement.className = "chat-message ai error";
         errorMessageElement.textContent = `Error: ${error.message}`;
         chatBox.appendChild(errorMessageElement);
     }
-
+    //clear file
+    fileInput.value = "";
+    document.getElementById('fileInfo').style.display = "none";
+    // Scroll to the bottom after response
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Save chat as PDF
-    document.getElementById("save-pdf").addEventListener("click", function () {
-        let chatBox = document.getElementById("chat-box").innerHTML; // Get chat HTML content
-        fetch("/save_chat_pdf", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_html: chatBox })
-        })
-        .then(response => response.blob())
-        .then(blob => {
-            let url = window.URL.createObjectURL(blob);
-            let a = document.createElement("a");
-            a.href = url;
-            a.download = "chat_history.pdf";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        });
-    });
-
-    // Upload PDF and extract chat memory
-    document.getElementById("upload-button").addEventListener("click", function () {
-        let fileInput = document.getElementById("upload-pdf");
-        let file = fileInput.files[0];
-        if (!file) {
-            alert("Please select a PDF file to upload.");
-            return;
-        }
-
-        let formData = new FormData();
-        formData.append("file", file);
-
-        fetch("/upload_chat_pdf", {
-            method: "POST",
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert("Chat history restored.");
-                location.reload();
-            } else {
-                alert("Error restoring chat.");
-            }
-        });
-    });
-    
 document.addEventListener("DOMContentLoaded", function () {
     let selectedFiles = []; // Store selected files
     let useWeb = false; // Track web search status
@@ -1271,15 +1419,16 @@ document.querySelectorAll('#writingStyle-options .dropdown-option').forEach(opti
 
         adjustHeight();
     });
-    // Boolean state variables
+    // Click outside disappear
+document.addEventListener("DOMContentLoaded", function () {
 let isExtractSessionOpen = false;
 let isToolboxOpen = false;
 
 // Get elements
 const extractSessionDiv = document.getElementById("extract-session-div");
 const toolboxDiv = document.getElementById("open-toolbox-div");
-const extractButton = document.getElementById("extract-button");
-const toolboxButton = document.getElementById("toolbox-button");
+const extractButton = document.getElementById("export-session-button");
+const toolboxButton = document.getElementById("open-toolbox-button");
 
 // Toggle extract session dropdown
 function toggleExtractSession(event) {
@@ -1305,6 +1454,11 @@ document.addEventListener("click", () => {
         toolboxDiv.classList.remove("active");
         isToolboxOpen = false;
     }
+});
+
+// Attach event listeners to buttons
+extractButton.addEventListener("click", toggleExtractSession);
+toolboxButton.addEventListener("click", toggleOpenToolbox);
 });
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -1337,7 +1491,6 @@ async function uploadChatHistory() {
     const chatBox = document.getElementById("chat-box");
 
     if (!file) {
-        alert("Please select a file to upload.");
         return;
     }
 
@@ -1356,10 +1509,14 @@ async function uploadChatHistory() {
             throw new Error(data.error || "Failed to restore chat history.");
         }
 
-        alert("Chat history restored successfully!");
-
         // ✅ Clear the chat box before inserting new messages
-        chatBox.innerHTML = "";
+       //chatBox.innerHTML = "";
+
+        [...chatBox.children].forEach(child => {
+            if (!child.matches("#chat-controls")){
+                child.remove();
+            }
+        });
 
         // ✅ Loop through restored messages and insert into chat box
         data.chat_memory.forEach(message => {
@@ -1368,7 +1525,15 @@ async function uploadChatHistory() {
             
             // ✅ Ensure AI messages support innerHTML for rich formatting
             if (message.role === "assistant") {
-                messageElement.innerHTML = message.content;
+                const preElement = document.createElement("pre");
+                preElement.innerHTML = message.content;
+
+                const copyButton2 = document.createElement("button")
+                copyButton2.className = "copy-button";
+                copyButton2.innerHTML = "<i class='fa-regular fa-copy'></i>&nbsp; Copy"
+
+                messageElement.appendChild(preElement);
+                messageElement.appendChild(copyButton2);
             } else {
                 messageElement.textContent = message.content;
             }
@@ -1384,8 +1549,17 @@ async function uploadChatHistory() {
         alert("Error restoring chat: " + error.message);
     }
 }
+// Open Import Dialog When Clicking the Upload Button
+document.getElementById("importButton")?.addEventListener("click", function () {
+        document.getElementById("upload-chat-file").click();
+    });
 
-    
+//auto-submit
+document.getElementById("upload-chat-file")?.addEventListener("change", function () {
+    if (this.files.length > 0) {
+        uploadChatHistory();
+    }
+});
 </script>
 </body>
 </html>
