@@ -22,58 +22,7 @@ import pdfplumber
 from langchain.utilities.tavily_search import TavilySearchAPIWrapper
 from langchain.tools.tavily_search import TavilySearchResults
 from langchain_aws import ChatBedrock
-
-from fpdf import FPDF
 import fitz  # PyMuPDF for PDF extraction
-
-@app.route("/save_chat_pdf", methods=["POST"])
-def save_chat_pdf():
-    """Saves chat history as a PDF with HTML formatting."""
-    data = request.json
-    chat_html = data.get("chat_html", "")
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Arial", size=12)
-
-    # Convert HTML to plain text for simplicity
-    soup = BeautifulSoup(chat_html, "html.parser")
-    chat_text = soup.get_text()
-
-    pdf.multi_cell(0, 10, chat_text)
-
-    pdf_output = "chat_history.pdf"
-    pdf.output(pdf_output)
-
-    return send_file(pdf_output, as_attachment=True)
-
-
-@app.route("/upload_chat_pdf", methods=["POST"])
-def upload_chat_pdf():
-    """Processes uploaded PDF and restores chat memory."""
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-
-    file = request.files["file"]
-    if not file.filename.endswith(".pdf"):
-        return jsonify({"error": "Invalid file type. Please upload a PDF."}), 400
-
-    file_path = os.path.join(app.config["UPLOAD_FOLDER"], "uploaded_chat.pdf")
-    file.save(file_path)
-
-    try:
-        # Extract text from the uploaded PDF
-        doc = fitz.open(file_path)
-        chat_text = "\n".join(page.get_text() for page in doc).strip()
-        
-        # Restore chat memory
-        session["chat_memory"] = [{"role": "user", "content": chat_text}]
-        
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 
 #Tavily
 os.environ["TAVILY_API_KEY"] = os.environ.get('SearchKey')
@@ -331,78 +280,55 @@ def filter_history(history, dynamic_keywords):
     
     return [history[i] for i in selected_indexes]
 
-def get_llm():
-    return ChatBedrock(
-        client=bedrock,
-        model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
-        max_tokens=800
-    )
-
-def extract_urls(observation):
-    try:
-        if isinstance(observation, str):
-            observation = json.loads(observation)
-
-        if isinstance(observation, list):
-            urls = [item["url"] for item in observation if isinstance(item, dict) and "url" in item]
-            return urls if urls else ["No URLS found."]
-
-        elif isinstance(observation, dict) and "results" in observation:
-            urls = [item["url"] for item in observation["results"] if "url" in item]
-
-    except Exception as e:
-        return ["Error extracting URLs"]
 
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
-def invoke_claude_bedrock_stream(content, chat_memory):
-    """Streams Claude's responses via AWS Bedrock."""
-    full_history = chat_memory + [{"role": "user", "content": content}]
-    
-    payload = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 4000,
-        "messages": full_history,
-        "stream": True  # Enable streaming
-    }
-
-    response = bedrock.invoke_model_with_response_stream(
-        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
-        contentType="application/json",
-        accept="application/json",
-        body=json.dumps(payload)
-    )
-
-    def generate():
-        for event in response.get("body"):
-            chunk = json.loads(event["chunk"]["bytes"])
-            text = chunk.get("text", "").strip()
-            if text:
-                yield f"data: {json.dumps({'text': text})}\n\n"
-
-    return generate()
-
-# ✅ Updated `/chat` route with Streaming
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Handles user messages, file uploads, and streams Claude AI responses."""
+    """Handles user messages & file uploads, allowing text-only requests as well."""
+    
     chat_memory = session.get('chat_memory', [])
 
-    # 1️⃣ Process user input
-    user_message = request.json.get("message", "").strip()
-    web_search_enabled = request.json.get("web_search_enabled", False)  # Read toggle state
+    # Check if the request contains JSON or form data
+    if request.is_json:
+        user_message = request.json.get("message", "").strip()
+    else:
+        user_message = request.form.get("message", "").strip()
 
-    if not user_message:
+    files = request.files.getlist("file")  # Allow multiple file uploads
+
+    if not user_message and not files:
         return jsonify({"error": "No input provided"}), 400
 
-    content = [{"type": "text", "text": user_message}]
-    chat_memory.append({"role": "user", "content": user_message})
-
-    # 2️⃣ Process file uploads
-    files = request.files.getlist("file")
+    content = [{"type": "text", "text": user_message}] if user_message else []
     text_from_files = []
 
     for file in files:
         file_ext = file.filename.split(".")[-1].lower()
+
+        # Ensure only one image file is uploaded at a time
+        image_files = [file for file in files if file.filename.split(".")[-1].lower() in ["png", "jpeg", "jpg"]]
+        if len(image_files) > 1:
+            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(file_path)
+
+            try:
+                # Convert image to Base64 for AI processing
+                image_base64 = convert_image_to_base64(file_path)
+                content.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": f"image/{file_ext}",
+                        "data": image_base64
+                    }
+                })
+            finally:
+                os.remove(file_path)  # Cleanup image
+            continue  # Skip text processing for images
+
         if file_ext not in ALLOWED_EXTENSIONS:
             return jsonify({"error": f"Invalid file type: {file_ext}"}), 400
 
@@ -411,65 +337,47 @@ def chat():
         file.save(file_path)
 
         try:
-            extracted_text = process_file(file_path, file_ext)
-            if extracted_text:
-                text_from_files.append(extracted_text)
+            # Extract text from supported document types
+            text = process_file(file_path, file_ext)
+            if text:
+                text_from_files.append(text)
         finally:
-            os.remove(file_path)  # Cleanup file after processing
+            os.remove(file_path)  # Cleanup document
 
     # Combine extracted text from all documents
-    if text_from_files:
-        combined_text = "\n\n".join(text_from_files)
-        content.append({"type": "text", "text": combined_text})
+    combined_text = "\n\n".join(text_from_files)
+
+    # Ensure text fits within Claude's context window (~200K tokens)
+    if len(combined_text) > 800_000:  # Approx. 200K tokens
+        combined_text = combined_text[:800_000]  # Trim excess text
+
+    if combined_text:
         chat_memory.append({"role": "user", "content": combined_text})
+    
+    if combined_text:
+        content.append({"type": "text", "text": combined_text})
 
-    # 3️⃣ Web Search (if enabled)
-    extracted_urls = ""
-    if web_search_enabled:
-        llm = ChatBedrock(client=bedrock, model_id="anthropic.claude-3-5-sonnet-20240620-v1:0", max_tokens=800)
-        
-        agent_chain = initialize_agent(
-            tools=[tavily_tool],  # Tavily Search Tool
-            llm=llm,
-            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-            verbose=True,
-            system_message="""
-            The year is 2025, Donald Trump is President again, and your knowledge is outdated.
-            You are a **research assistant** who provides **strictly factual information** based **only** on retrieved sources.
-            RULES:
-            - **DO NOT** use your own internal knowledge.
-            - **ONLY** use the provided citations as evidence.
-            - **DO NOT** generate information if sources do not support it.
-            - **Do not modify or contradict sources. The sources are always correct.** 
-            If no sources are available, state: "No recent information available."
-            Include citations for every statement.
-            """
-        )
+    # Store user input in chat memory before invoking Claude
+    chat_memory.append({"role": "user", "content": user_message})
 
-        try:
-            ai_response = agent_chain.run(user_message)
-            observation = search.results(user_message)
-            extracted_urls = [item["url"] for item in observation.get("results", []) if "url" in item]
+    # Invoke Claude AI for processing
+    ai_response = invoke_claude_bedrock(content, chat_memory)
 
-        except Exception as e:
-            ai_response = f"Error running web search: {str(e)}"
+    # Store AI response in chat memory
+    chat_memory.append({"role": "assistant", "content": ai_response})
 
-        # Store web search results in memory
-        chat_memory.append({"role": "assistant", "content": ai_response})
-        session['chat_memory'] = chat_memory
+  # Format the response for display
+    formatted_response = format_ai_response(ai_response)
 
-        # Return response (not streamed)
-        return jsonify({
-            "response": f"""<br><br><div><pre>{ai_response}</pre>{'<br>'.join(extracted_urls) if extracted_urls else ""}<br><br>
-                            <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
-        })
+    #quick_prompt = request.form.get("quickPrompt")
+    #writing_style = data.get("writingStyle")
+    print("Response: 200")
+    session['chat_memory'] = chat_memory
+    return jsonify({
+        "response": f"""<br><br><div><pre>{formatted_response}</pre>
+                        <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
+    })
 
-    # Stream the response
-    return Response(
-        invoke_claude_bedrock_stream(content, chat_memory),
-        content_type="text/event-stream"
-    )
-  
 @app.route("/reset_chat", methods=["POST"])
 def reset_chat():
     session['chat_memory'] = []
@@ -500,6 +408,7 @@ def chat_with_image():
 
     formatted_response = format_ai_response(ai_response)
     return jsonify({"response": f"<br><br><div><pre>{formatted_response}</pre><button class='copy-button'><i class='fa-regular fa-copy'></i>&nbsp; Copy</button></div>"})
+
 def get_text_from_content(content):
     if isinstance(content, list):
         return " ".join(item.get("text", "") for item in content if isinstance(item, dict))
@@ -535,7 +444,7 @@ def invoke_claude_bedrock(content, chat_memory):
         body=json.dumps(payload)
     )
 
-    response_body = response["Body"].read().decode("utf-8")
+    response_body = response["body"].read().decode("utf-8")
     result = json.loads(response_body)
 
     if "content" in result and isinstance(result["content"], list):
@@ -622,16 +531,11 @@ def export_chat_txt():
     if not chat_memory:
         return "No chat history found", 404
 
-    # Format chat history
-    chat_text = "Chat History\n\n"
-    for message in chat_memory:
-        role = "User" if message["role"] == "user" else "Assistant"
-        text = message["content"]
-        chat_text += f"{role}: {text}\n\n"
+    chat_json = json.dumps(chat_memory)
 
     # Send the file as a downloadable response
     return Response(
-        chat_text,
+        chat_json,
         mimetype="text/plain",
         headers={"Content-Disposition": "attachment; filename=chat_history.txt"}
     )
@@ -664,7 +568,6 @@ def upload_chat_txt():
 
     except Exception as e:
         return jsonify({"error": f"Failed to process file: {str(e)}"}), 500
-
 
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
