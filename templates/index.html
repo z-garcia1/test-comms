@@ -1044,9 +1044,14 @@
 async function sendMessage() {
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
-    const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
     const webSearchEnabled = document.getElementById('webSearchToggle')?.checked; // Check if web search is enabled
+
+    const query = userInput.value.trim();
+    if (!query && fileInput.files.length === 0) {
+        alert("Please enter a message or upload a file before sending.");
+        return;
+    }
 
     // Capture advanced AI settings
     const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
@@ -1054,25 +1059,23 @@ async function sendMessage() {
     const topP = document.getElementById("topP")?.value || "0.9";
     const topK = document.getElementById("topK")?.value || "50";
 
-    // Ensure at least one input (text or file) is provided
-    if (userMessage === "" && fileInput.files.length === 0) {
-        alert("Please enter a message or upload a file before sending.");
-        return;
-    }
-
-    // Construct hidden AI settings prompt and modified message
+    // Construct AI settings prompt
     let hiddenPrompt = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
-    const modifiedMessage = hiddenPrompt + userMessage;
+    const modifiedMessage = hiddenPrompt + query;
 
-    // Display user message in chat if available
-    if (userMessage) {
+    // API endpoint selection
+    const apiEndpoint = webSearchEnabled ? "/search-agent" : "/chat";
+    console.log("Sending request to:", apiEndpoint, "with data:", modifiedMessage);
+
+    // Display user message in chat
+    if (query) {
         const userMessageElement = document.createElement('div');
         userMessageElement.className = 'chat-message user';
-        userMessageElement.textContent = userMessage;
+        userMessageElement.textContent = query;
         chatBox.appendChild(userMessageElement);
     }
 
-    // Clear input fields before processing
+    // Clear input field
     userInput.value = '';
 
     // Add loading spinner
@@ -1086,14 +1089,12 @@ async function sendMessage() {
 
     try {
         let response;
-        let apiEndpoint = webSearchEnabled ? "/search-agent" : "/chat"; // Dynamically select the endpoint
-
-        // Check if files are attached
         if (fileInput.files.length > 0) {
+            // If file is uploaded, use FormData
             const formData = new FormData();
             formData.append("message", modifiedMessage);
 
-            // Append each selected file to the FormData object
+            // Append each selected file
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append("file", fileInput.files[i]);
             }
@@ -1103,11 +1104,11 @@ async function sendMessage() {
                 body: formData
             });
         } else {
-            // Text-only request
+            // If no file is uploaded, send JSON request
             response = await fetch(apiEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: modifiedMessage })
+                body: JSON.stringify({ query: modifiedMessage })
             });
         }
 
@@ -1116,6 +1117,7 @@ async function sendMessage() {
         }
 
         const data = await response.json();
+        console.log("Response:", data);
 
         // Remove the spinner
         spinner.remove();
@@ -1131,7 +1133,7 @@ async function sendMessage() {
     } catch (error) {
         spinner.remove();
         console.error("Error:", error);
-        
+
         const errorMessageElement = document.createElement("div");
         errorMessageElement.className = "chat-message ai error";
         errorMessageElement.textContent = `Error: ${error.message}`;
@@ -1146,9 +1148,8 @@ async function sendMessage() {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+// Handle file upload display
 document.addEventListener("DOMContentLoaded", function () {
-    let selectedFiles = []; // Store selected files
-
     document.getElementById('fileUpload')?.addEventListener('change', function () {
         const fileInfo = document.getElementById('fileInfo');
         const fileNameDisplay = document.getElementById('fileName');
