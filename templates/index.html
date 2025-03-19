@@ -1564,6 +1564,34 @@ document.getElementById("upload-chat-file")?.addEventListener("change", function
         uploadChatHistory();
     }
 });
+async function uploadFile() {
+    const fileInput = document.getElementById("file-input");
+    const chatBox = document.getElementById("chat-box");
+
+    if (fileInput.files.length === 0) {
+        alert("Please select a file to upload.");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    try {
+        const response = await fetch("/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        // Add extracted Markdown to the chat-box
+        const aiMessageElement = document.createElement("div");
+        aiMessageElement.className = "chat-message ai";
+        aiMessageElement.innerHTML = `<strong>AI:</strong> <pre>${result.markdown}</pre>
 </script>
 </body>
 </html>
