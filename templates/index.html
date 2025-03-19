@@ -1591,7 +1591,31 @@ async function uploadFile() {
         // Add extracted Markdown to the chat-box
         const aiMessageElement = document.createElement("div");
         aiMessageElement.className = "chat-message ai";
-        aiMessageElement.innerHTML = `<strong>AI:</strong> <pre>${result.markdown}</pre>
+        aiMessageElement.innerHTML = `<strong>AI:</strong> <pre>${result.markdown}</pre>`;
+        chatBox.appendChild(aiMessageElement);
+
+        // Store chat history in session storage
+        let chatMemory = JSON.parse(sessionStorage.getItem("chat_memory")) || [];
+        chatMemory.push({ role: "assistant", content: result.markdown });
+        sessionStorage.setItem("chat_memory", JSON.stringify(chatMemory));
+
+        // Scroll to bottom
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Clear file input
+        fileInput.value = "";
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Error uploading file. Please try again.");
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Copied to clipboard!");
+    });
+}
+
 </script>
 </body>
 </html>
