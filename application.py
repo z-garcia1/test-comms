@@ -568,6 +568,9 @@ def upload_chat_txt():
 
     except Exception as e:
         return jsonify({"error": f"Failed to process file: {str(e)}"}), 500
+
+LAMBDA_API_URL = "https://g4glmetryxjabzxbkv5sl5ksru0yawtx.lambda-url.us-east-1.on.aws/"
+
 def call_lambda(pdf_data):
     response = requests.post(LAMBDA_API_URL, json={"body": base64.b64encode(pdf_data).decode()}, timeout=30)
     return response.json
