@@ -573,7 +573,7 @@ LAMBDA_API_URL = "https://g4glmetryxjabzxbkv5sl5ksru0yawtx.lambda-url.us-east-1.
 
 def call_lambda(pdf_data):
     response = requests.post(LAMBDA_API_URL, json={"body": base64.b64encode(pdf_data).decode()}, timeout=30)
-    return response.json
+    return response.json()
 
 def call_bedrock(image_b64):
     payload = {
