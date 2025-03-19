@@ -568,7 +568,44 @@ def upload_chat_txt():
 
     except Exception as e:
         return jsonify({"error": f"Failed to process file: {str(e)}"}), 500
+def call_lambda(pdf_data):
+    response = requests.post(LAMBDA_API_URL, json={"body": base64.b64encode(pdf_data).decode()}, timeout=30)
+    return response.json
 
+def call_bedrock(image_b64):
+    payload = {
+        "modelId": "meta.llama3-2-11b-instruct-v1:0",
+        "inputText": "",
+        "inputImage": image_b64,
+        "parameters": {"maxLength": 512}
+    }
+    response = bedrock.invoke_model(
+        modelId = "meta.llama3-2-11b-instruct-v1:0",
+        contentType = "application/json",
+        accept = "application/json",
+        body = json.dumps(payload)
+    )
+    return json.loads(response["body"].read())["text"]
+
+@app.route("/upload-pdf-to-image", methods=["POST"])
+def upload_pdf():
+    if "file" not in request.files:
+        return jsonify({"error": "No file"}), 400
+    
+    file = request.files["file"]
+    pdf_data = file.read()
+
+    lambda_response = call_lambda(pdf_data)
+    if "error" in lambda_response:
+        return jsonify({"error": "Error"}), 500
+    
+    markdown_output = []
+    for image_b64 in lambda_response["images"]:
+        extracted_text = call_bedrock(image_b64)
+        markdown_output.append(f"- {extracted_text}")
+
+    return jsonify({"markdown": "\n".join(markdown_output)})
+  
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
     app.run(debug=True)
