@@ -23,6 +23,7 @@ from langchain.utilities.tavily_search import TavilySearchAPIWrapper
 from langchain.tools.tavily_search import TavilySearchResults
 from langchain_aws import ChatBedrock
 import fitz  # PyMuPDF for PDF extraction
+from flask_cors import CORS
 
 #Tavily
 os.environ["TAVILY_API_KEY"] = os.environ.get('SearchKey')
@@ -38,6 +39,7 @@ bedrock = boto3.client('bedrock-runtime',
 # Flask app setup
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
+CORS(app)
 
 TI_LOGIN_URL = "https://entlogin.ti.com/as/authorization.oauth2?response_type=code&client_id=DCIT_ALL_COMMS_IR_AI&redirect_uri=https%3A%2F%2Fern2xy8fzd.us-east-1.awsapprunner.com%2Fcallback&prompt=login"
 
