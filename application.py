@@ -608,7 +608,19 @@ def upload_pdf():
         markdown_output.append(f"- {extracted_text}")
 
     return jsonify({"markdown": "\n".join(markdown_output)})
-  
+
+LAMBDA_URL_WEB = "https://iauc34s2dgg66w4oxlb7wfr5d40dxgqp.lambda-url.us-east-1.on.aws/"
+
+@app.route("/search-agent", methods=["POST"])
+def search_agent():
+    data = request.get_json(silent=True)
+    if not data or "query" not in data:
+        return jsonify({"error": "Query cannot be empty"}), 400
+    query = data["query"].strip()
+    if not query:
+        return jsonify({"error": "Empty query"})
+    response = requests.post(LAMBDA_URL_WEB, json={"query": query})
+
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
     app.run(debug=True)
