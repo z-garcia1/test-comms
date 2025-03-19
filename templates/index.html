@@ -1018,7 +1018,7 @@
                         </button>
                     </div>
                     <div class="tooltip-container">
-                        <button class="file" onclick="toggleWebSearch()"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <button class="file" id="searchToggle"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="12" cy="12" r="10" stroke="black" stroke-width="2"/>
                             <path d="M2 12H22" stroke="black" stroke-width="2"/>
                             <path d="M12 2C14.5 5 15.5 7 15.5 12C15.5 17 14.5 19 12 22" stroke="black" stroke-width="2"/>
@@ -1026,6 +1026,7 @@
                           </svg></i>
                             <span class="tooltip">Search the web</span>
                         </button>
+                        <input type="checkbox" class="hide" id="webSearchToggle">
                     </div>
                 </div>
             <div class="hide">Upload file: docx, pptx, pdf, xlsx, jpeg, png, csv</div>
@@ -1045,6 +1046,7 @@ async function sendMessage() {
     const chatBox = document.getElementById('chat-box');
     const userMessage = userInput.value.trim();
     const fileInput = document.getElementById('fileUpload');
+    const webSearchEnabled = document.getElementById('webSearchToggle')?.checked; // Check if web search is enabled
 
     // Capture advanced AI settings
     const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
@@ -1084,26 +1086,25 @@ async function sendMessage() {
 
     try {
         let response;
+        let apiEndpoint = webSearchEnabled ? "/search-agent" : "/chat"; // Dynamically select the endpoint
 
         // Check if files are attached
         if (fileInput.files.length > 0) {
             const formData = new FormData();
-            formData.append("message", modifiedMessage); // Include modified message
-            //formData.append("writingStyle", selectedWritingStyle);
-            //formData.append("quickPrompt", selectedQuickPrompt);
+            formData.append("message", modifiedMessage);
 
             // Append each selected file to the FormData object
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append("file", fileInput.files[i]);
             }
 
-            response = await fetch("/chat", {
+            response = await fetch(apiEndpoint, {
                 method: "POST",
                 body: formData
             });
         } else {
             // Text-only request
-            response = await fetch("/chat", {
+            response = await fetch(apiEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ message: modifiedMessage })
@@ -1136,16 +1137,17 @@ async function sendMessage() {
         errorMessageElement.textContent = `Error: ${error.message}`;
         chatBox.appendChild(errorMessageElement);
     }
-    //clear file
+
+    // Clear file input
     fileInput.value = "";
     document.getElementById('fileInfo').style.display = "none";
+
     // Scroll to the bottom after response
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 document.addEventListener("DOMContentLoaded", function () {
     let selectedFiles = []; // Store selected files
-    let useWeb = false; // Track web search status
 
     document.getElementById('fileUpload')?.addEventListener('change', function () {
         const fileInfo = document.getElementById('fileInfo');
@@ -1159,6 +1161,12 @@ document.addEventListener("DOMContentLoaded", function () {
             fileInfo.style.display = 'none';
         }
     });
+
+    // Toggle web search on button click
+    document.getElementById('webSearchToggle')?.addEventListener('change', function () {
+        console.log("Web search enabled:", this.checked);
+    });
+});
     
     // Toggle Sidebar
     document.getElementById("toggleBtn")?.addEventListener("click", () => {
@@ -1634,6 +1642,10 @@ async function uploadFileExtract() {
         alert("Error uploading file. Please try again.");
     }
 }
+    // Open Import Dialog When Clicking the Upload Button
+document.getElementById("searchToggle")?.addEventListener("click", function () {
+        document.getElementById("webSearchToggle").click();
+    });
 </script>
 </body>
 </html>
