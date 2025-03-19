@@ -828,7 +828,19 @@
     text-align: left;
     transition: background-color 0.2s;
 }
-.toolbox-pop-button:hover{
+.toolbox-pop-button-extract{
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+.toolbox-pop-button:hover, .toolbox-pop-button-extract:hover{
     background-color: #b7b7b7;
 }
 #extract-session-div.active, #open-toolbox-div.active{
@@ -959,7 +971,8 @@
             </div>
             <div id="open-toolbox-div">
                 <div>
-                    <button class="toolbox-pop-button">
+                    <button class="toolbox-pop-button-extract" id="importOCR">
+                        <input type="file" class="hide" id="file-input-extract" accept=".pdf">
                         <div class="icon-container">
                             <div class="icon-container-image"><i class="fa-solid fa-align-left"></i></div>
                         </div>
@@ -1564,8 +1577,20 @@ document.getElementById("upload-chat-file")?.addEventListener("change", function
         uploadChatHistory();
     }
 });
-async function uploadFile() {
-    const fileInput = document.getElementById("file-input");
+// Open Import Dialog When Clicking the Upload Button
+document.getElementById("importOCR")?.addEventListener("click", function () {
+        document.getElementById("file-input-extract").click();
+    });
+
+//auto-submit
+document.getElementById("file-input-extract")?.addEventListener("change", function () {
+    if (this.files.length > 0) {
+        uploadFileExtract();
+    }
+});
+//upload complex pdf
+async function uploadFileExtract() {
+    const fileInput = document.getElementById("file-input-extract");
     const chatBox = document.getElementById("chat-box");
 
     if (fileInput.files.length === 0) {
@@ -1577,7 +1602,7 @@ async function uploadFile() {
     formData.append("file", fileInput.files[0]);
 
     try {
-        const response = await fetch("/upload", {
+        const response = await fetch("/upload-pdf-to-image", {
             method: "POST",
             body: formData
         });
@@ -1591,7 +1616,7 @@ async function uploadFile() {
         // Add extracted Markdown to the chat-box
         const aiMessageElement = document.createElement("div");
         aiMessageElement.className = "chat-message ai";
-        aiMessageElement.innerHTML = `<strong>AI:</strong> <pre>${result.markdown}</pre>`;
+        aiMessageElement.innerHTML = `<pre>${result.markdown}</pre>`;
         chatBox.appendChild(aiMessageElement);
 
         // Store chat history in session storage
@@ -1609,13 +1634,6 @@ async function uploadFile() {
         alert("Error uploading file. Please try again.");
     }
 }
-
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        alert("Copied to clipboard!");
-    });
-}
-
 </script>
 </body>
 </html>
