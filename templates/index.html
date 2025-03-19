@@ -1026,9 +1026,9 @@
                           </svg></i>
                             <span class="tooltip">Search the web</span>
                         </button>
-                        <input type="checkbox" class="hide" id="webSearchToggle">
                     </div>
                 </div>
+            <input type="checkbox" class="hide" id="webSearchToggle">
             <div class="hide">Upload file: docx, pptx, pdf, xlsx, jpeg, png, csv</div>
             <div class="file-info" id="fileInfo">
                 <span id="fileName"></span>
@@ -1161,12 +1161,6 @@ document.addEventListener("DOMContentLoaded", function () {
             fileInfo.style.display = 'none';
         }
     });
-
-    // Toggle web search on button click
-    document.getElementById('webSearchToggle')?.addEventListener('change', function () {
-        console.log("Web search enabled:", this.checked);
-    });
-});
     
     // Toggle Sidebar
     document.getElementById("toggleBtn")?.addEventListener("click", () => {
@@ -1645,6 +1639,10 @@ async function uploadFileExtract() {
     // Open Import Dialog When Clicking the Upload Button
 document.getElementById("searchToggle")?.addEventListener("click", function () {
         document.getElementById("webSearchToggle").click();
+    });
+    // Toggle web search on button click
+    document.getElementById('webSearchToggle')?.addEventListener('change', function () {
+        console.log("Web search enabled:", this.checked);
     });
 </script>
 </body>
