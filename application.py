@@ -619,7 +619,7 @@ def search_agent():
     query = data["query"].strip()
     if not query:
         return jsonify({"error": "Empty query"})
-    response = requests.post(LAMBDA_URL_WEB, json={"body": {"query": query}})
+    response = requests.post(LAMBDA_URL_WEB, json={"query": query})
 
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
