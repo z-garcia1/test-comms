@@ -755,7 +755,7 @@
     position: relative;
     top: 25px;
 }
-.export-session-pop-button{
+/*.export-session-pop-button{
     display: flex;
     align-items: flex-start;
     gap: 12px;
@@ -769,7 +769,7 @@
 }
 .export-session-pop-button:hover{
     background-color: #2d3d5e;
-}
+}*/
 .icon-container{
     padding: 8px;
     border-radius: 50%;
@@ -945,7 +945,7 @@
         <div class="top-pad"></div>
         <div class="chat-box" id="chat-box">
             <div id="chat-controls">
-            <button id="export-session-button">Export&nbsp;&nbsp;<i class="fa-solid fa-download"></i></button>
+            <button class="export-session-pop-button" id="export-session-button">Export&nbsp;&nbsp;<i class="fa-solid fa-download"></i></button>
             <button class="import-session-button" id="importButton" onclick="uploadChatHistory()">Import&nbsp;&nbsp;<i class="fa-solid fa-braille"></i></button>
             <input type="file" class="hide" id="upload-chat-file" accept=".txt">
             <div id="extract-session-div">
@@ -1657,8 +1657,9 @@ document.getElementById("searchToggle")?.addEventListener("click", function () {
 document.addEventListener("DOMContentLoaded", function () {
     console.log("Initializing event listeners...");
 
-    // ✅ Export Chat on Button Click (Instant Download)
-    document.getElementById("export-session-button")?.addEventListener("click", async function () {
+    // ✅ Export Chat Button
+    const exportButton = document.getElementById("export-session-button");
+    exportButton?.addEventListener("click", async function () {
         try {
             const response = await fetch("/export-chat-txt", { method: "GET" });
 
@@ -1670,7 +1671,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "chat_history.txt"; // ✅ Auto-downloads file immediately
+            a.download = "chat_history.txt"; // ✅ Auto-downloads the file
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1681,25 +1682,29 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // ✅ Import Chat File on Button Click
-    document.getElementById("importButton")?.addEventListener("click", function () {
+    // ✅ Import Chat File Button
+    const importButton = document.getElementById("importButton");
+    importButton?.addEventListener("click", function () {
         document.getElementById("upload-chat-file").click();
     });
 
     // ✅ Auto-Trigger Upload When File is Selected
-    document.getElementById("upload-chat-file")?.addEventListener("change", function () {
+    const uploadChatFile = document.getElementById("upload-chat-file");
+    uploadChatFile?.addEventListener("change", function () {
         if (this.files.length > 0) {
             uploadChatHistory();
         }
     });
 
     // ✅ Handle File Extraction for Complex PDFs
-    document.getElementById("file-input-extract")?.addEventListener("change", function () {
+    const fileInputExtract = document.getElementById("file-input-extract");
+    fileInputExtract?.addEventListener("change", function () {
         if (this.files.length > 0) {
             uploadFileExtract();
         }
     });
 });
+
 </script>
 </body>
 </html>
