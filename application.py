@@ -286,17 +286,17 @@ def filter_history(history, dynamic_keywords):
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Handles user messages & file uploads, allowing text-only requests as well."""
+    """Handles user messages & file uploads, including image processing."""
     
     chat_memory = session.get('chat_memory', [])
 
-    # Check if the request contains JSON or form data
+    # Check if request contains JSON or form data
     if request.is_json:
         user_message = request.json.get("message", "").strip()
     else:
         user_message = request.form.get("message", "").strip()
 
-    files = request.files.getlist("file")  # Allow multiple file uploads
+    files = request.files.getlist("file")  # ✅ Get all uploaded files
 
     if not user_message and not files:
         return jsonify({"error": "No input provided"}), 400
@@ -307,15 +307,12 @@ def chat():
     for file in files:
         file_ext = file.filename.split(".")[-1].lower()
 
-        # Ensure only one image file is uploaded at a time
-        image_files = [file for file in files if file.filename.split(".")[-1].lower() in ["png", "jpeg", "jpg"]]
-        if len(image_files) > 1:
-            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+        # ✅ Save the file first
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(file_path)
 
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(file_path)
-
+        if file_ext in ["png", "jpeg", "jpg"]:  # ✅ Image Handling
             try:
                 # Convert image to Base64 for AI processing
                 image_base64 = convert_image_to_base64(file_path)
@@ -328,52 +325,41 @@ def chat():
                     }
                 })
             finally:
-                os.remove(file_path)  # Cleanup image
-            continue  # Skip text processing for images
+                os.remove(file_path)  # ✅ Cleanup image after processing
 
-        if file_ext not in ALLOWED_EXTENSIONS:
+        elif file_ext in ALLOWED_EXTENSIONS:  # ✅ Document Handling
+            try:
+                text = process_file(file_path, file_ext)
+                if text:
+                    text_from_files.append(text)
+            finally:
+                os.remove(file_path)  # ✅ Cleanup after text extraction
+
+        else:
             return jsonify({"error": f"Invalid file type: {file_ext}"}), 400
 
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        file.save(file_path)
-
-        try:
-            # Extract text from supported document types
-            text = process_file(file_path, file_ext)
-            if text:
-                text_from_files.append(text)
-        finally:
-            os.remove(file_path)  # Cleanup document
-
-    # Combine extracted text from all documents
+    # ✅ Merge extracted text from all documents
     combined_text = "\n\n".join(text_from_files)
 
-    # Ensure text fits within Claude's context window (~200K tokens)
-    if len(combined_text) > 800_000:  # Approx. 200K tokens
-        combined_text = combined_text[:800_000]  # Trim excess text
+    if len(combined_text) > 800_000:  # Trim if too long
+        combined_text = combined_text[:800_000]
 
     if combined_text:
         chat_memory.append({"role": "user", "content": combined_text})
-    
-    if combined_text:
         content.append({"type": "text", "text": combined_text})
 
-    # Store user input in chat memory before invoking Claude
+    # ✅ Store user message before sending to Claude
     chat_memory.append({"role": "user", "content": user_message})
 
-    # Invoke Claude AI for processing
+    # ✅ Send to Claude AI
     ai_response = invoke_claude_bedrock(content, chat_memory)
 
-    # Store AI response in chat memory
+    # ✅ Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
 
-  # Format the response for display
+    # ✅ Format AI response for display
     formatted_response = format_ai_response(ai_response)
 
-    #quick_prompt = request.form.get("quickPrompt")
-    #writing_style = data.get("writingStyle")
-    print("Response: 200")
     session['chat_memory'] = chat_memory
     return jsonify({
         "response": f"""<br><br><div><pre>{formatted_response}</pre>
