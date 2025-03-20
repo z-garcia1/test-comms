@@ -1663,21 +1663,35 @@ document.getElementById("searchToggle")?.addEventListener("click", function () {
     });
 document.addEventListener("DOMContentLoaded", function () {
     console.log("Initializing event listeners...");
-    
-    document.getElementById("export-session-button")?.addEventListener("click", exportChatHistory);
-    document.getElementById("importButton")?.addEventListener("click", function () {
-        document.getElementById("upload-chat-file").click();
-    });
 
-    document.getElementById("upload-chat-file")?.addEventListener("change", function () {
-        if (this.files.length > 0) {
-            uploadChatHistory();
+    // ✅ Use event delegation to handle dynamically loaded buttons
+    document.addEventListener("click", function (event) {
+
+        // ✅ Handle Export Button Click
+        if (event.target.closest("#export-session-button")) {
+            exportChatHistory();
+        }
+
+        // ✅ Handle Import Button Click
+        if (event.target.closest("#importButton")) {
+            document.getElementById("upload-chat-file").click();
         }
     });
 
-    document.getElementById("file-input-extract")?.addEventListener("change", function () {
-        if (this.files.length > 0) {
-            uploadFileExtract();
+    // ✅ Handle File Input Change Events
+    document.addEventListener("change", function (event) {
+        // ✅ When a chat history file is selected, upload it
+        if (event.target.closest("#upload-chat-file")) {
+            if (event.target.files.length > 0) {
+                uploadChatHistory();
+            }
+        }
+
+        // ✅ When a PDF file is selected, extract text from it
+        if (event.target.closest("#file-input-extract")) {
+            if (event.target.files.length > 0) {
+                uploadFileExtract();
+            }
         }
     });
 });
