@@ -1057,10 +1057,8 @@ async function sendMessage() {
     const apiEndpoint = webSearchEnabled ? "/search-agent" : "/chat";
 
     if (webSearchEnabled) {
-        // ✅ If web search is enabled, send only "query"
         requestData = { query: query };
     } else {
-        // ✅ If normal chat, send "message" with system settings
         const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
         const temperature = document.getElementById("temperature")?.value || "0.7";
         const topP = document.getElementById("topP")?.value || "0.9";
@@ -1073,7 +1071,6 @@ async function sendMessage() {
 
     console.log("Sending request to:", apiEndpoint, "with data:", requestData);
 
-    // Display user message in chat
     if (query) {
         const userMessageElement = document.createElement('div');
         userMessageElement.className = 'chat-message user';
@@ -1081,22 +1078,18 @@ async function sendMessage() {
         chatBox.appendChild(userMessageElement);
     }
 
-    // Clear input field
     userInput.value = '';
 
-    // Add loading spinner
     const spinner = document.createElement("div");
     spinner.className = "spinner";
     spinner.style.display = 'block';
     chatBox.appendChild(spinner);
 
-    // Ensure chat scrolls to the bottom
     chatBox.scrollTop = chatBox.scrollHeight;
 
     try {
         let response;
         if (fileInput.files.length > 0) {
-            // ✅ Handle file uploads
             const formData = new FormData();
             formData.append("message", requestData.message || query);
 
@@ -1109,52 +1102,55 @@ async function sendMessage() {
                 body: formData
             });
         } else {
-            // ✅ Handle text-only requests
             response = await fetch(apiEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(requestData)  // ✅ Send correct key depending on endpoint
+                body: JSON.stringify(requestData)
             });
         }
 
-        console.log("Raw Response:", response); // ✅ Debugging log
+        console.log("Raw Response:", response);
 
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        console.log("Parsed Response Data:", data);  // ✅ Debugging log
+        console.log("Parsed Response Data:", data);
 
-        // ✅ Ensure the correct response field is accessed
         const aiResponse = data.ai_response || data.response;
+        const sources = data.sources || [];
+
         if (!aiResponse) {
             throw new Error("Empty response from server.");
         }
 
-        // ✅ Display AI response in chat
-        const aiMessageElement = document.createElement("div");
-        aiMessageElement.className = "chat-message ai";
-        aiMessageElement.innerHTML = aiResponse;
-        chatBox.appendChild(aiMessageElement);
+        // ✅ Construct HTML for AI response
+        let aiMessageHTML = `<div class="chat-message ai"><p>${aiResponse}</p>`;
+
+        // ✅ Add sources as clickable links
+        if (sources.length > 0) {
+            aiMessageHTML += `<h4>Sources:</h4><ul>`;
+            sources.forEach(source => {
+                aiMessageHTML += `<li><a href="${source.url}" target="_blank">${source.title}</a></li>`;
+            });
+            aiMessageHTML += `</ul>`;
+        }
+
+        aiMessageHTML += `</div>`;
+
+        // ✅ Append to chat
+        chatBox.innerHTML += aiMessageHTML;
 
     } catch (error) {
         console.error("Error:", error);
-
-        const errorMessageElement = document.createElement("div");
-        errorMessageElement.className = "chat-message ai error";
-        errorMessageElement.textContent = `Error: ${error.message}`;
-        chatBox.appendChild(errorMessageElement);
+        chatBox.innerHTML += `<div class="chat-message ai error">Error: ${error.message}</div>`;
     } finally {
-        // ✅ Ensure spinner is removed after response or error
         spinner.remove();
     }
 
-    // Clear file input
     fileInput.value = "";
     document.getElementById('fileInfo').style.display = "none";
-
-    // Scroll to the bottom after response
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
