@@ -1045,7 +1045,7 @@ async function sendMessage() {
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
     const fileInput = document.getElementById('fileUpload');
-    const webSearchEnabled = document.getElementById('webSearchToggle')?.checked; // Check if web search is enabled
+    const webSearchEnabled = document.getElementById('webSearchToggle')?.checked;
 
     const query = userInput.value.trim();
     if (!query && fileInput.files.length === 0) {
@@ -1053,17 +1053,22 @@ async function sendMessage() {
         return;
     }
 
-    // Capture advanced AI settings
-    const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
-    const temperature = document.getElementById("temperature")?.value || "0.7";
-    const topP = document.getElementById("topP")?.value || "0.9";
-    const topK = document.getElementById("topK")?.value || "50";
+    let modifiedMessage;
+    
+    if (webSearchEnabled) {
+        // ✅ If web search is enabled, send the plain query (no system info)
+        modifiedMessage = query;
+    } else {
+        // ✅ If using normal chat, include AI settings
+        const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
+        const temperature = document.getElementById("temperature")?.value || "0.7";
+        const topP = document.getElementById("topP")?.value || "0.9";
+        const topK = document.getElementById("topK")?.value || "50";
 
-    // Construct AI settings prompt
-    let hiddenPrompt = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n`;
-    const modifiedMessage = hiddenPrompt + query;
+        modifiedMessage = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n${query}`;
+    }
 
-    // API endpoint selection
+    // Select API endpoint
     const apiEndpoint = webSearchEnabled ? "/search-agent" : "/chat";
     console.log("Sending request to:", apiEndpoint, "with data:", modifiedMessage);
 
@@ -1090,11 +1095,10 @@ async function sendMessage() {
     try {
         let response;
         if (fileInput.files.length > 0) {
-            // If file is uploaded, use FormData
+            // ✅ Handle file uploads
             const formData = new FormData();
             formData.append("message", modifiedMessage);
 
-            // Append each selected file
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append("file", fileInput.files[i]);
             }
@@ -1104,7 +1108,7 @@ async function sendMessage() {
                 body: formData
             });
         } else {
-            // If no file is uploaded, send JSON request
+            // ✅ Handle text-only requests
             response = await fetch(apiEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1112,24 +1116,27 @@ async function sendMessage() {
             });
         }
 
+        console.log("Raw Response:", response); // ✅ Debugging log
+
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        console.log("Response:", data);
+        console.log("Parsed Response Data:", data);  // ✅ Debugging log
 
-        // Remove the spinner
-        spinner.remove();
-
-        if (data.response) {
-            const aiMessageElement = document.createElement("div");
-            aiMessageElement.className = "chat-message ai";
-            aiMessageElement.innerHTML = data.response;
-            chatBox.appendChild(aiMessageElement);
-        } else {
+        // ✅ Ensure we are accessing the correct response key
+        const aiResponse = data.ai_response || data.response;
+        if (!aiResponse) {
             throw new Error("Empty response from server.");
         }
+
+        // ✅ Display AI response in chat
+        const aiMessageElement = document.createElement("div");
+        aiMessageElement.className = "chat-message ai";
+        aiMessageElement.innerHTML = aiResponse;
+        chatBox.appendChild(aiMessageElement);
+
     } catch (error) {
         spinner.remove();
         console.error("Error:", error);
