@@ -1480,21 +1480,21 @@ document.addEventListener("click", () => {
 });
 
 // Attach event listeners to buttons
-extractButton.addEventListener("click", toggleExtractSession);
-toolboxButton.addEventListener("click", toggleOpenToolbox);
+document.addEventListener("click", function (event) {
+    if (event.target.closest("#export-session-button")) {
+        toggleExtractSession(event);
+    }
+    if (event.target.closest("#open-toolbox-button")) {
+        toggleOpenToolbox(event);
+    }
 });
 
 document.addEventListener("DOMContentLoaded", function () {
-    document.querySelector(".export-text-container").addEventListener("click", function () {
-        fetch("/export-chat-txt", { method: "GET" }) // Request TXT file from backend
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Failed to download chat history");
-                }
-                return response.blob();
-            })
+    document.addEventListener("click", function (event) {
+    if (event.target.closest(".export-text-container")) {
+        fetch("/export-chat-txt", { method: "GET" }) 
+            .then(response => response.blob())
             .then(blob => {
-                // Create a downloadable link for the TXT file
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
@@ -1505,9 +1505,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 window.URL.revokeObjectURL(url);
             })
             .catch(error => console.error("Error exporting chat:", error));
+    }
     });
 });
-
 function updateSearchIconColor() {
     const searchIcon = document.getElementById('searchToggleIcon'); // Get the SVG
     const webSearchEnabled = document.getElementById('webSearchToggle')?.checked; // Check toggle
