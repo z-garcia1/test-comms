@@ -10,7 +10,6 @@ import random
 import string
 import requests
 import base64
-import mimetypes
 import fitz  # PyMuPDF for PDF extraction
 import pandas as pd
 import pptx
@@ -134,7 +133,7 @@ def resize_image(file_path, max_size=240):
             original_size = img.size
             img.thumbnail((max_size, max_size))  # ✅ Resize while maintaining aspect ratio
 
-            # ✅ Force PNG if format is missing
+            # ✅ Detect image format
             img_format = img.format if img.format else "PNG"
 
             img_buffer = io.BytesIO()
@@ -148,14 +147,15 @@ def resize_image(file_path, max_size=240):
     except Exception as e:
         print(f"Error resizing image: {e}")
 
+
 ### ✅ File Processing Functions ###
+import magic
 def convert_image_to_base64(file_path):
-    """Converts an image file to a Base64 string with proper MIME type handling."""
+    """Converts an image file to a Base64 string using python-magic for MIME type detection."""
     try:
-        # ✅ Detect MIME type (e.g., image/png, image/jpeg)
-        mime_type, _ = mimetypes.guess_type(file_path)
-        if not mime_type:
-            mime_type = "image/png"  # Default to PNG if unknown
+        # ✅ Use `python-magic` to detect the exact MIME type
+        mime = magic.Magic(mime=True)
+        mime_type = mime.from_file(file_path)
 
         with open(file_path, "rb") as file:
             base64_data = base64.b64encode(file.read()).decode("utf-8")
@@ -164,6 +164,7 @@ def convert_image_to_base64(file_path):
     except Exception as e:
         print(f"Error converting image to Base64: {e}")
         return None
+
 
 def extract_text_from_pdf(file_path):
     """Extracts text from a PDF file, falling back to pdfplumber if fitz fails."""
@@ -318,36 +319,37 @@ def chat():
     text_from_files = []
 
     for file in files:
-    file_ext = file.filename.split(".")[-1].lower()
+        file_ext = file.filename.split(".")[-1].lower()
 
-    # ✅ Ensure only one image file is uploaded at a time
-    if file_ext in ["png", "jpeg", "jpg"]:
-        if len(files) > 1:
-            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+        # ✅ Ensure only one image file is uploaded at a time
+        if file_ext in ["png", "jpeg", "jpg"]:
+            if len(files) > 1:
+                return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
 
-        # ✅ Save the image file first
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        file.save(file_path)
+            # ✅ Save the image file first
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(file_path)
 
-        try:
-            # ✅ Resize image before encoding (avoids large payloads)
-            resize_image(file_path)
+            try:
+                # ✅ Resize image before encoding
+                resize_image(file_path)
 
-            # ✅ Convert image to Base64 (ensure MIME type)
-            image_base64 = convert_image_to_base64(file_path)
+                # ✅ Convert image to Base64 using `python-magic`
+                image_base64 = convert_image_to_base64(file_path)
 
-            content.append({
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": f"image/{file_ext}",
-                    "data": image_base64
-                }
-            })
-        finally:
-            os.remove(file_path)  # ✅ Clean up image after processing
-        continue  # ✅ Skip text extraction for images
+                content.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": magic.Magic(mime=True).from_file(file_path),
+                        "data": image_base64
+                    }
+                })
+            finally:
+                os.remove(file_path)  # ✅ Clean up image after processing
+            continue  # ✅ Skip text extraction for images
+
 
         elif file_ext in ALLOWED_EXTENSIONS:  # ✅ Document Handling
             try:
