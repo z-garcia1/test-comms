@@ -1114,10 +1114,9 @@ async function sendMessage() {
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
-
+        spinner.remove();
         const data = await response.json();
         console.log("Parsed Response Data:", data);
-        spinner.remove();
 
         const aiResponse = data.ai_response || data.response;
         const sources = data.sources || [];
@@ -1145,6 +1144,7 @@ async function sendMessage() {
         aiMessageElement.className = "chat-message ai";
         aiMessageElement.innerHTML = aiMessageHTML;
         chatBox.appendChild(aiMessageElement);
+        reattachEventListeners();
 
     } catch (error) {
         console.error("Error:", error);
@@ -1666,6 +1666,23 @@ document.getElementById("searchToggle")?.addEventListener("click", function () {
     document.getElementById('webSearchToggle')?.addEventListener('change', function () {
         console.log("Web search enabled:", this.checked);
     });
+    function reattachEventListeners() {
+    console.log("Reattaching event listeners...");
+    
+    document.getElementById("export-session-button")?.addEventListener("click", exportChatHistory);
+    document.getElementById("importButton")?.addEventListener("click", uploadChatHistory);
+    document.getElementById("upload-chat-file")?.addEventListener("change", function () {
+        if (this.files.length > 0) {
+            uploadChatHistory();
+        }
+    });
+
+    document.getElementById("file-input-extract")?.addEventListener("change", function () {
+        if (this.files.length > 0) {
+            uploadFileExtract();
+        }
+    });
+}
 </script>
 </body>
 </html>
