@@ -131,18 +131,16 @@ def resize_image(file_path, max_size=240):
     """Resizes an image before encoding to Base64 to avoid large payloads."""
     try:
         with Image.open(file_path) as img:
-            original_size = img.size  # Store original size for debugging
-            img.thumbnail((max_size, max_size))  # Resize while maintaining aspect ratio
+            original_size = img.size
+            img.thumbnail((max_size, max_size))  # ✅ Resize while maintaining aspect ratio
 
-            # Ensure image format is correctly set
-            img_format = img.format if img.format else "PNG"  # Default to PNG if format is missing
+            # ✅ Force PNG if format is missing
+            img_format = img.format if img.format else "PNG"
 
-            # Save resized image to memory
             img_buffer = io.BytesIO()
             img.save(img_buffer, format=img_format)  # ✅ Explicitly set format
             img_buffer.seek(0)
 
-            # Overwrite original file with resized version
             with open(file_path, "wb") as f:
                 f.write(img_buffer.getvalue())
 
@@ -320,27 +318,36 @@ def chat():
     text_from_files = []
 
     for file in files:
-        file_ext = file.filename.split(".")[-1].lower()
+    file_ext = file.filename.split(".")[-1].lower()
 
-        # ✅ Save the file first
+    # ✅ Ensure only one image file is uploaded at a time
+    if file_ext in ["png", "jpeg", "jpg"]:
+        if len(files) > 1:
+            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+
+        # ✅ Save the image file first
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(file_path)
 
-        if file_ext in ["png", "jpeg", "jpg"]:  # ✅ Image Handling
-            try:
-                # Convert image to Base64 for AI processing
-                image_base64 = convert_image_to_base64(file_path)
-                content.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": f"image/{file_ext}",
-                        "data": image_base64
-                    }
-                })
-            finally:
-                os.remove(file_path)  # ✅ Cleanup image after processing
+        try:
+            # ✅ Resize image before encoding (avoids large payloads)
+            resize_image(file_path)
+
+            # ✅ Convert image to Base64 (ensure MIME type)
+            image_base64 = convert_image_to_base64(file_path)
+
+            content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": f"image/{file_ext}",
+                    "data": image_base64
+                }
+            })
+        finally:
+            os.remove(file_path)  # ✅ Clean up image after processing
+        continue  # ✅ Skip text extraction for images
 
         elif file_ext in ALLOWED_EXTENSIONS:  # ✅ Document Handling
             try:
@@ -377,8 +384,7 @@ def chat():
 
     session['chat_memory'] = chat_memory
     return jsonify({
-        "response": f"""<br><br><div><pre>{formatted_response}</pre>
-                        <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
+        "response": f"""<br><br><div><pre>{formatted_response}</pre><button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
     })
 
 @app.route("/reset_chat", methods=["POST"])
