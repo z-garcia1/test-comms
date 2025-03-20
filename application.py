@@ -10,6 +10,7 @@ import random
 import string
 import requests
 import base64
+import mimetypes
 import fitz  # PyMuPDF for PDF extraction
 import pandas as pd
 import pptx
@@ -133,24 +134,38 @@ def resize_image(file_path, max_size=240):
             original_size = img.size  # Store original size for debugging
             img.thumbnail((max_size, max_size))  # Resize while maintaining aspect ratio
 
+            # Ensure image format is correctly set
+            img_format = img.format if img.format else "PNG"  # Default to PNG if format is missing
+
             # Save resized image to memory
             img_buffer = io.BytesIO()
-            img.save(img_buffer, format=img.format)
+            img.save(img_buffer, format=img_format)  # ✅ Explicitly set format
             img_buffer.seek(0)
 
             # Overwrite original file with resized version
             with open(file_path, "wb") as f:
                 f.write(img_buffer.getvalue())
 
-            print(f"Resized image from {original_size} to {img.size}")
+            print(f"Resized image from {original_size} to {img.size}, format: {img_format}")
     except Exception as e:
         print(f"Error resizing image: {e}")
 
 ### ✅ File Processing Functions ###
 def convert_image_to_base64(file_path):
-    """Converts an image file to a Base64 string."""
-    with open(file_path, "rb") as file:
-        return base64.b64encode(file.read()).decode("utf-8")
+    """Converts an image file to a Base64 string with proper MIME type handling."""
+    try:
+        # ✅ Detect MIME type (e.g., image/png, image/jpeg)
+        mime_type, _ = mimetypes.guess_type(file_path)
+        if not mime_type:
+            mime_type = "image/png"  # Default to PNG if unknown
+
+        with open(file_path, "rb") as file:
+            base64_data = base64.b64encode(file.read()).decode("utf-8")
+
+        return f"data:{mime_type};base64,{base64_data}"  # ✅ Ensures correct MIME type
+    except Exception as e:
+        print(f"Error converting image to Base64: {e}")
+        return None
 
 def extract_text_from_pdf(file_path):
     """Extracts text from a PDF file, falling back to pdfplumber if fitz fails."""
