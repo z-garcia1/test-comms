@@ -1028,7 +1028,7 @@
                         </button>
                     </div>
                 </div>
-            <input type="checkbox" class="hide" id="webSearchToggle">
+            <input type="checkbox" class="hide" id="webSearchToggle" onclick="updateSearchIconColor()">
             <div class="hide">Upload file: docx, pptx, pdf, xlsx, jpeg, png, csv</div>
             <div class="file-info" id="fileInfo">
                 <span id="fileName"></span>
@@ -1509,6 +1509,17 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+function updateSearchIconColor() {
+    const searchIcon = document.getElementById('searchToggleIcon'); // Get the SVG element
+    const webSearchEnabled = document.getElementById('webSearchToggle')?.checked; // Check if toggle is enabled
+
+    if (webSearchEnabled) {
+        searchIcon.setAttribute("stroke", "blue");  // ✅ Change to blue when enabled
+    } else {
+        searchIcon.setAttribute("stroke", "black"); // ✅ Reset to black when disabled
+    }
+}
+    
 async function uploadChatHistory() {
     const fileInput = document.getElementById("upload-chat-file");
     const file = fileInput.files[0];
@@ -1649,12 +1660,6 @@ document.getElementById("searchToggle")?.addEventListener("click", function () {
     document.getElementById('webSearchToggle')?.addEventListener('change', function () {
         console.log("Web search enabled:", this.checked);
     });
- document.getElementById("searchToggle")?.addEventListener("click", function () {   
-    if (webSearchToggle?.checked) {
-        document.getElementById('searchToggleIcon').setAttribute("stroke", "blue");
-    } else {
-        document.getElementById('searchToggleIcon').setAttribute("stroke", "black");
-    }});
 </script>
 </body>
 </html>
