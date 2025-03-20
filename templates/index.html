@@ -1053,24 +1053,21 @@ async function sendMessage() {
         return;
     }
 
-    let modifiedMessage;
-    
-    if (webSearchEnabled) {
-        // ✅ If web search is enabled, send the plain query (no system info)
-        modifiedMessage = query;
-    } else {
-        // ✅ If using normal chat, include AI settings
+    let messageToSend = query;  // ✅ Default: Only send user message
+
+    if (!webSearchEnabled) {
+        // ✅ If normal chat is selected, include system settings
         const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
         const temperature = document.getElementById("temperature")?.value || "0.7";
         const topP = document.getElementById("topP")?.value || "0.9";
         const topK = document.getElementById("topK")?.value || "50";
 
-        modifiedMessage = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n${query}`;
+        messageToSend = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n${query}`;
     }
 
     // Select API endpoint
     const apiEndpoint = webSearchEnabled ? "/search-agent" : "/chat";
-    console.log("Sending request to:", apiEndpoint, "with data:", modifiedMessage);
+    console.log("Sending request to:", apiEndpoint, "with data:", messageToSend);
 
     // Display user message in chat
     if (query) {
@@ -1097,7 +1094,7 @@ async function sendMessage() {
         if (fileInput.files.length > 0) {
             // ✅ Handle file uploads
             const formData = new FormData();
-            formData.append("message", modifiedMessage);
+            formData.append("message", messageToSend);
 
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append("file", fileInput.files[i]);
@@ -1112,7 +1109,7 @@ async function sendMessage() {
             response = await fetch(apiEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: modifiedMessage })
+                body: JSON.stringify({ message: messageToSend })  // ✅ Send `message` instead of `query`
             });
         }
 
@@ -1125,8 +1122,8 @@ async function sendMessage() {
         const data = await response.json();
         console.log("Parsed Response Data:", data);  // ✅ Debugging log
 
-        // ✅ Ensure we are accessing the correct response key
-        const aiResponse = data.ai_response || data.response;
+        // ✅ Ensure the correct response field is accessed
+        const aiResponse = data.response;
         if (!aiResponse) {
             throw new Error("Empty response from server.");
         }
@@ -1138,13 +1135,15 @@ async function sendMessage() {
         chatBox.appendChild(aiMessageElement);
 
     } catch (error) {
-        spinner.remove();
         console.error("Error:", error);
 
         const errorMessageElement = document.createElement("div");
         errorMessageElement.className = "chat-message ai error";
         errorMessageElement.textContent = `Error: ${error.message}`;
         chatBox.appendChild(errorMessageElement);
+    } finally {
+        // ✅ Ensure spinner is removed after response or error
+        spinner.remove();
     }
 
     // Clear file input
