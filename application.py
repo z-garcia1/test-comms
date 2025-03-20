@@ -615,12 +615,18 @@ LAMBDA_URL_WEB = "https://iauc34s2dgg66w4oxlb7wfr5d40dxgqp.lambda-url.us-east-1.
 
 @app.route("/search-agent", methods=["POST"])
 def search_agent():
+    chat_memory = session.get('chat_memory', [])
     data = request.get_json(silent=True)
     if not data or "query" not in data:
         return jsonify({"error": "Query cannot be empty"}), 400
     query = data["query"].strip()
     if not query:
         return jsonify({"error": "Empty query"})
+    
+    chat_memory.append({"role": "user", "content": query})
+    chat_memory.append({"role": "assistant", "content": ai_response, "sources": sources})
+    session['chat_memory'] = chat_memory
+  
     response = requests.post(LAMBDA_URL_WEB, json={"query": query})
     lambda_response = response.json()
     return jsonify(lambda_response)
