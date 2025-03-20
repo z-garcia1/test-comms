@@ -948,7 +948,7 @@
             <button class="export-session-pop-button" id="export-session-button">Export&nbsp;&nbsp;<i class="fa-solid fa-download"></i></button>
             <button class="import-session-button" id="importButton" onclick="uploadChatHistory()">Import&nbsp;&nbsp;<i class="fa-solid fa-braille"></i></button>
             <input type="file" class="hide" id="upload-chat-file" accept=".txt">
-            <div id="extract-session-div">
+            <!--<div id="extract-session-div">
                 <div>
                     <button class="export-session-pop-button">
                         <div class="icon-container">
@@ -971,7 +971,7 @@
                         </div>
                     </button>
                 </div>
-            </div>
+            </div>-->
             <div id="open-toolbox-div">
                 <div>
                     <button class="toolbox-pop-button-extract" id="importOCR">
@@ -1657,9 +1657,41 @@ document.getElementById("searchToggle")?.addEventListener("click", function () {
 document.addEventListener("DOMContentLoaded", function () {
     console.log("Initializing event listeners...");
 
-    // ✅ Export Chat Button
-    const exportButton = document.getElementById("export-session-button");
-    exportButton?.addEventListener("click", async function () {
+    // ✅ Attach a single click event listener to the entire document
+    document.addEventListener("click", function (event) {
+        const target = event.target;
+
+        // ✅ Export Chat
+        if (target.closest("#export-session-button")) {
+            exportChatHistory();
+        }
+
+        // ✅ Import Chat - Open File Picker
+        if (target.closest("#importButton")) {
+            document.getElementById("upload-chat-file").click();
+        }
+
+        // ✅ Upload Chat History When File is Selected
+        if (target.closest("#upload-chat-file")) {
+            document.getElementById("upload-chat-file").addEventListener("change", function () {
+                if (this.files.length > 0) {
+                    uploadChatHistory();
+                }
+            });
+        }
+
+        // ✅ Extract Complex PDFs
+        if (target.closest("#file-input-extract")) {
+            document.getElementById("file-input-extract").addEventListener("change", function () {
+                if (this.files.length > 0) {
+                    uploadFileExtract();
+                }
+            });
+        }
+    });
+
+    // ✅ Ensure export triggers immediately when clicked
+    async function exportChatHistory() {
         try {
             const response = await fetch("/export-chat-txt", { method: "GET" });
 
@@ -1671,7 +1703,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "chat_history.txt"; // ✅ Auto-downloads the file
+            a.download = "chat_history.txt"; // ✅ Auto-downloads file
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1680,30 +1712,9 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error("Error exporting chat:", error);
             alert("Failed to export chat. Please try again.");
         }
-    });
-
-    // ✅ Import Chat File Button
-    const importButton = document.getElementById("importButton");
-    importButton?.addEventListener("click", function () {
-        document.getElementById("upload-chat-file").click();
-    });
-
-    // ✅ Auto-Trigger Upload When File is Selected
-    const uploadChatFile = document.getElementById("upload-chat-file");
-    uploadChatFile?.addEventListener("change", function () {
-        if (this.files.length > 0) {
-            uploadChatHistory();
-        }
-    });
-
-    // ✅ Handle File Extraction for Complex PDFs
-    const fileInputExtract = document.getElementById("file-input-extract");
-    fileInputExtract?.addEventListener("change", function () {
-        if (this.files.length > 0) {
-            uploadFileExtract();
-        }
-    });
+    }
 });
+
 
 </script>
 </body>
