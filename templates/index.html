@@ -846,6 +846,12 @@
 #extract-session-div.active, #open-toolbox-div.active{
     display: block !important;
 }
+#chat-controls{
+    display: none;
+}
+#chat-controls.active {
+    display: block; /* Show when active */
+}
     </style>
 </head>
 <body>
@@ -1666,10 +1672,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ✅ Use event delegation to handle dynamically loaded buttons
     document.addEventListener("click", function (event) {
+        const chatControls = document.getElementById("chat-controls");
 
-        // ✅ Handle Export Button Click
+        // ✅ Handle Export Button Click (Toggle Dropdown)
         if (event.target.closest("#export-session-button")) {
-            exportChatHistory();
+            event.stopPropagation(); // Prevent event from bubbling up
+            if (chatControls) {
+                chatControls.classList.toggle("active"); // Show or Hide dropdown
+            }
         }
 
         // ✅ Handle Import Button Click
@@ -1692,6 +1702,14 @@ document.addEventListener("DOMContentLoaded", function () {
             if (event.target.files.length > 0) {
                 uploadFileExtract();
             }
+        }
+    });
+
+    // ✅ Close the dropdown when clicking outside of it
+    document.addEventListener("click", function (event) {
+        const chatControls = document.getElementById("chat-controls");
+        if (chatControls && !event.target.closest("#chat-controls") && !event.target.closest("#export-session-button")) {
+            chatControls.classList.remove("active"); // Hide dropdown
         }
     });
 });
