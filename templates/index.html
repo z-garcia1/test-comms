@@ -1141,7 +1141,10 @@ async function sendMessage() {
         aiMessageHTML += `</div>`;
 
         // ✅ Append to chat
-        chatBox.innerHTML += aiMessageHTML;
+        const aiMessageElement = document.createElement("div");
+        aiMessageElement.className = "chat-message ai";
+        aiMessageElement.innerHTML = aiMessageHTML;
+        chatBox.appendChild(aiMessageElement);
 
     } catch (error) {
         console.error("Error:", error);
