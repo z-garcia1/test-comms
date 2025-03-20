@@ -1117,6 +1117,7 @@ async function sendMessage() {
 
         const data = await response.json();
         console.log("Parsed Response Data:", data);
+        spinner.remove();
 
         const aiResponse = data.ai_response || data.response;
         const sources = data.sources || [];
@@ -1132,7 +1133,7 @@ async function sendMessage() {
         if (sources.length > 0) {
             aiMessageHTML += `<h4>Sources:</h4><ul>`;
             sources.forEach(source => {
-                aiMessageHTML += `<br><br><li><a href="${source.url}" target="_blank">${source.url}</a></li>`;
+                aiMessageHTML += `<li><a href="${source.url}" target="_blank">${source.url}</a></li>`;
             });
             aiMessageHTML += `</ul>`;
         }
@@ -1145,10 +1146,7 @@ async function sendMessage() {
     } catch (error) {
         console.error("Error:", error);
         chatBox.innerHTML += `<div class="chat-message ai error">Error: ${error.message}</div>`;
-    } finally {
-        if (spinner && spinner.parentNode){
-        spinner.remove();}
-    }
+    } finally {spinner.remove();}
     fileInput.value = "";
     document.getElementById('fileInfo').style.display = "none";
     chatBox.scrollTop = chatBox.scrollHeight;
