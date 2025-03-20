@@ -1053,21 +1053,25 @@ async function sendMessage() {
         return;
     }
 
-    let messageToSend = query;  // ✅ Default: Only send user message
+    let requestData = {};
+    const apiEndpoint = webSearchEnabled ? "/search-agent" : "/chat";
 
-    if (!webSearchEnabled) {
-        // ✅ If normal chat is selected, include system settings
+    if (webSearchEnabled) {
+        // ✅ If web search is enabled, send only "query"
+        requestData = { query: query };
+    } else {
+        // ✅ If normal chat, send "message" with system settings
         const systemPrompt = document.getElementById("systemPrompt")?.value.trim() || "";
         const temperature = document.getElementById("temperature")?.value || "0.7";
         const topP = document.getElementById("topP")?.value || "0.9";
         const topK = document.getElementById("topK")?.value || "50";
 
-        messageToSend = `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n${query}`;
+        requestData = {
+            message: `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n${query}`
+        };
     }
 
-    // Select API endpoint
-    const apiEndpoint = webSearchEnabled ? "/search-agent" : "/chat";
-    console.log("Sending request to:", apiEndpoint, "with data:", messageToSend);
+    console.log("Sending request to:", apiEndpoint, "with data:", requestData);
 
     // Display user message in chat
     if (query) {
@@ -1094,7 +1098,7 @@ async function sendMessage() {
         if (fileInput.files.length > 0) {
             // ✅ Handle file uploads
             const formData = new FormData();
-            formData.append("message", messageToSend);
+            formData.append("message", requestData.message || query);
 
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append("file", fileInput.files[i]);
@@ -1109,7 +1113,7 @@ async function sendMessage() {
             response = await fetch(apiEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: messageToSend })  // ✅ Send `message` instead of `query`
+                body: JSON.stringify(requestData)  // ✅ Send correct key depending on endpoint
             });
         }
 
@@ -1123,7 +1127,7 @@ async function sendMessage() {
         console.log("Parsed Response Data:", data);  // ✅ Debugging log
 
         // ✅ Ensure the correct response field is accessed
-        const aiResponse = data.response;
+        const aiResponse = data.ai_response || data.response;
         if (!aiResponse) {
             throw new Error("Empty response from server.");
         }
