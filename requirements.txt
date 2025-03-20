@@ -20,4 +20,3 @@ langchain
 langchain-aws
 tavily-python
 flask-cors
-python-magic
