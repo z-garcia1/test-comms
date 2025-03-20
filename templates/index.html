@@ -1127,7 +1127,7 @@ async function sendMessage() {
         }
 
         // ✅ Construct HTML for AI response
-        let aiMessageHTML = `<div class="chat-message ai"><p>${aiResponse}</p>`;
+        let aiMessageHTML = `<div class="chat-message ai"><pre>${aiResponse}</pre>`;
 
         // ✅ Add sources as clickable links
         if (sources.length > 0) {
