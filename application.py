@@ -624,13 +624,12 @@ def search_agent():
   
     response = requests.post(LAMBDA_URL_WEB, json={"query": query})
     lambda_response = response.json()
+    return jsonify(lambda_response)
     ai_response = lambda_response.get("ai_response", "No response provided.)
-
     chat_memory = session.get('chat_memory', [])
     chat_memory.append({"role": "user", "content": query})
     chat_memory.append({"role": "assistant", "content": ai_response})
     session['chat_memory'] = chat_memory
-    return jsonify(lambda_response)
 
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
