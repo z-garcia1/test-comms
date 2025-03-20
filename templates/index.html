@@ -1146,9 +1146,9 @@ async function sendMessage() {
         console.error("Error:", error);
         chatBox.innerHTML += `<div class="chat-message ai error">Error: ${error.message}</div>`;
     } finally {
-        spinner.remove();
+        if (spinner && spinner.parentNode){
+        spinner.remove();}
     }
-    spinner.remove();
     fileInput.value = "";
     document.getElementById('fileInfo').style.display = "none";
     chatBox.scrollTop = chatBox.scrollHeight;
