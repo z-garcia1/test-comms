@@ -1588,17 +1588,7 @@ async function uploadChatHistory() {
         alert("Error restoring chat: " + error.message);
     }
 }
-// Open Import Dialog When Clicking the Upload Button
-document.getElementById("importButton")?.addEventListener("click", function () {
-        document.getElementById("upload-chat-file").click();
-    });
 
-//auto-submit
-document.getElementById("upload-chat-file")?.addEventListener("change", function () {
-    if (this.files.length > 0) {
-        uploadChatHistory();
-    }
-});
 // Open Import Dialog When Clicking the Upload Button
 document.getElementById("importOCR")?.addEventListener("click", function () {
         document.getElementById("file-input-extract").click();
@@ -1667,46 +1657,46 @@ document.getElementById("searchToggle")?.addEventListener("click", function () {
 document.addEventListener("DOMContentLoaded", function () {
     console.log("Initializing event listeners...");
 
-    // ✅ Use event delegation to handle dynamically loaded buttons
-    document.addEventListener("click", function (event) {
-        const chatControls = document.getElementById("chat-controls");
+    // ✅ Export Chat on Button Click (Instant Download)
+    document.getElementById("export-session-button")?.addEventListener("click", async function () {
+        try {
+            const response = await fetch("/export-chat-txt", { method: "GET" });
 
-        // ✅ Handle Export Button Click (Toggle Dropdown)
-        if (event.target.closest("#export-session-button")) {
-            event.stopPropagation(); // Prevent event from bubbling up
-            if (chatControls) {
-                chatControls.classList.toggle("active"); // Show or Hide dropdown
+            if (!response.ok) {
+                throw new Error("Failed to download chat history.");
             }
-        }
 
-        // ✅ Handle Import Button Click
-        if (event.target.closest("#importButton")) {
-            document.getElementById("upload-chat-file").click();
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "chat_history.txt"; // ✅ Auto-downloads file immediately
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Error exporting chat:", error);
+            alert("Failed to export chat. Please try again.");
         }
     });
 
-    // ✅ Handle File Input Change Events
-    document.addEventListener("change", function (event) {
-        // ✅ When a chat history file is selected, upload it
-        if (event.target.closest("#upload-chat-file")) {
-            if (event.target.files.length > 0) {
-                uploadChatHistory();
-            }
-        }
+    // ✅ Import Chat File on Button Click
+    document.getElementById("importButton")?.addEventListener("click", function () {
+        document.getElementById("upload-chat-file").click();
+    });
 
-        // ✅ When a PDF file is selected, extract text from it
-        if (event.target.closest("#file-input-extract")) {
-            if (event.target.files.length > 0) {
-                uploadFileExtract();
-            }
+    // ✅ Auto-Trigger Upload When File is Selected
+    document.getElementById("upload-chat-file")?.addEventListener("change", function () {
+        if (this.files.length > 0) {
+            uploadChatHistory();
         }
     });
 
-    // ✅ Close the dropdown when clicking outside of it
-    document.addEventListener("click", function (event) {
-        const chatControls = document.getElementById("chat-controls");
-        if (chatControls && !event.target.closest("#chat-controls") && !event.target.closest("#export-session-button")) {
-            chatControls.classList.remove("active"); // Hide dropdown
+    // ✅ Handle File Extraction for Complex PDFs
+    document.getElementById("file-input-extract")?.addEventListener("change", function () {
+        if (this.files.length > 0) {
+            uploadFileExtract();
         }
     });
 });
