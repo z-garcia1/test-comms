@@ -1132,7 +1132,7 @@ async function sendMessage() {
         if (sources.length > 0) {
             aiMessageHTML += `<h4>Sources:</h4><ul>`;
             sources.forEach(source => {
-                aiMessageHTML += `<li><a href="${source.url}" target="_blank">${source.title}</a></li>`;
+                aiMessageHTML += `<br><br><li><a href="${source.url}" target="_blank">${source.url}</a></li>`;
             });
             aiMessageHTML += `</ul>`;
         }
@@ -1148,7 +1148,7 @@ async function sendMessage() {
     } finally {
         spinner.remove();
     }
-
+    spinner.remove();
     fileInput.value = "";
     document.getElementById('fileInfo').style.display = "none";
     chatBox.scrollTop = chatBox.scrollHeight;
