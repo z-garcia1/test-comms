@@ -1144,7 +1144,6 @@ async function sendMessage() {
         aiMessageElement.className = "chat-message ai";
         aiMessageElement.innerHTML = aiMessageHTML;
         chatBox.appendChild(aiMessageElement);
-        reattachEventListeners();
 
     } catch (error) {
         console.error("Error:", error);
@@ -1666,39 +1665,25 @@ document.getElementById("searchToggle")?.addEventListener("click", function () {
     document.getElementById('webSearchToggle')?.addEventListener('change', function () {
         console.log("Web search enabled:", this.checked);
     });
-function reattachEventListeners() {
-    console.log("Reattaching event listeners...");
-
-    // ✅ Export Button
-    const exportButton = document.getElementById("export-session-button");
-    if (exportButton) {
-        exportButton.removeEventListener("click", exportChatHistory); // Prevent duplicate listeners
-        exportButton.addEventListener("click", exportChatHistory);
-    }
-
-    // ✅ Import Button
-    const importButton = document.getElementById("importButton");
-    if (importButton) {
-        importButton.removeEventListener("click", uploadChatHistory);
-        importButton.addEventListener("click", uploadChatHistory);
-    }
-
-    // ✅ Import File Change Listener
-    const uploadChatFile = document.getElementById("upload-chat-file");
-    if (uploadChatFile) {
-        uploadChatFile.removeEventListener("change", handleChatFileUpload);
-        uploadChatFile.addEventListener("change", handleChatFileUpload);
-    }
-
-    // ✅ Extract File Change Listener
-    const extractFileInput = document.getElementById("file-input-extract");
-    if (extractFileInput) {
-        extractFileInput.removeEventListener("change", handleFileExtractUpload);
-        extractFileInput.addEventListener("change", handleFileExtractUpload);
-    }
-}
 document.addEventListener("DOMContentLoaded", function () {
-    reattachEventListeners();  // ✅ Ensure buttons work on first load
+    console.log("Initializing event listeners...");
+    
+    document.getElementById("export-session-button")?.addEventListener("click", exportChatHistory);
+    document.getElementById("importButton")?.addEventListener("click", function () {
+        document.getElementById("upload-chat-file").click();
+    });
+
+    document.getElementById("upload-chat-file")?.addEventListener("change", function () {
+        if (this.files.length > 0) {
+            uploadChatHistory();
+        }
+    });
+
+    document.getElementById("file-input-extract")?.addEventListener("change", function () {
+        if (this.files.length > 0) {
+            uploadFileExtract();
+        }
+    });
 });
 </script>
 </body>
