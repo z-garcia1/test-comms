@@ -624,10 +624,11 @@ def search_agent():
   
     response = requests.post(LAMBDA_URL_WEB, json={"query": query})
     lambda_response = response.json()
+    ai_response = lambda_response.get("ai_response", "No response provided.)
 
     chat_memory = session.get('chat_memory', [])
     chat_memory.append({"role": "user", "content": query})
-    chat_memory.append({"role": "assistant", "content": lambda_response})
+    chat_memory.append({"role": "assistant", "content": ai_response})
     session['chat_memory'] = chat_memory
     return jsonify(lambda_response)
 
