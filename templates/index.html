@@ -1444,70 +1444,69 @@ document.querySelectorAll('#writingStyle-options .dropdown-option').forEach(opti
     });
     // Click outside disappear
 document.addEventListener("DOMContentLoaded", function () {
-let isExtractSessionOpen = false;
-let isToolboxOpen = false;
+    let isExtractSessionOpen = false;
+    let isToolboxOpen = false;
 
-// Get elements
-const extractSessionDiv = document.getElementById("extract-session-div");
-const toolboxDiv = document.getElementById("open-toolbox-div");
-const extractButton = document.getElementById("export-session-button");
-const toolboxButton = document.getElementById("open-toolbox-button");
+    // Get elements
+    const extractSessionDiv = document.getElementById("extract-session-div");
+    const toolboxDiv = document.getElementById("open-toolbox-div");
 
-// Toggle extract session dropdown
-function toggleExtractSession(event) {
-    event.stopPropagation(); // Prevent click from bubbling up
-    isExtractSessionOpen = !isExtractSessionOpen; // Toggle state
-    extractSessionDiv.classList.toggle("active", isExtractSessionOpen);
-}
-
-// Toggle toolbox dropdown
-function toggleOpenToolbox(event) {
-    event.stopPropagation(); // Prevent click from bubbling up
-    isToolboxOpen = !isToolboxOpen; // Toggle state
-    toolboxDiv.classList.toggle("active", isToolboxOpen);
-}
-
-// Click event to close dropdowns when clicking outside
-document.addEventListener("click", () => {
-    if (isExtractSessionOpen) {
-        extractSessionDiv.classList.remove("active");
-        isExtractSessionOpen = false;
+    // Toggle extract session dropdown
+    function toggleExtractSession(event) {
+        event.stopPropagation(); // Prevent click from bubbling up
+        isExtractSessionOpen = !isExtractSessionOpen; // Toggle state
+        extractSessionDiv.classList.toggle("active", isExtractSessionOpen);
     }
-    if (isToolboxOpen) {
-        toolboxDiv.classList.remove("active");
-        isToolboxOpen = false;
-    }
-});
 
-// Attach event listeners to buttons
-document.addEventListener("click", function (event) {
-    if (event.target.closest("#export-session-button")) {
-        toggleExtractSession(event);
+    // Toggle toolbox dropdown
+    function toggleOpenToolbox(event) {
+        event.stopPropagation(); // Prevent click from bubbling up
+        isToolboxOpen = !isToolboxOpen; // Toggle state
+        toolboxDiv.classList.toggle("active", isToolboxOpen);
     }
-    if (event.target.closest("#open-toolbox-button")) {
-        toggleOpenToolbox(event);
-    }
-});
 
-document.addEventListener("DOMContentLoaded", function () {
+    // Close dropdowns when clicking outside
+    document.addEventListener("click", () => {
+        if (isExtractSessionOpen) {
+            extractSessionDiv.classList.remove("active");
+            isExtractSessionOpen = false;
+        }
+        if (isToolboxOpen) {
+            toolboxDiv.classList.remove("active");
+            isToolboxOpen = false;
+        }
+    });
+
+    // Attach event listeners to buttons (Fixing button issue)
     document.addEventListener("click", function (event) {
-    if (event.target.closest(".export-text-container")) {
-        fetch("/export-chat-txt", { method: "GET" }) 
-            .then(response => response.blob())
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "chat_history.txt";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            })
-            .catch(error => console.error("Error exporting chat:", error));
-    }
+        if (event.target.closest("#export-session-button")) {
+            toggleExtractSession(event);
+        }
+        if (event.target.closest("#open-toolbox-button")) {
+            toggleOpenToolbox(event);
+        }
+    });
+
+    // ✅ Export chat when clicking on export button
+    document.addEventListener("click", function (event) {
+        if (event.target.closest(".export-text-container")) {
+            fetch("/export-chat-txt", { method: "GET" }) 
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "chat_history.txt";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => console.error("Error exporting chat:", error));
+        }
     });
 });
+
 function updateSearchIconColor() {
     const searchIcon = document.getElementById('searchToggleIcon'); // Get the SVG
     const webSearchEnabled = document.getElementById('webSearchToggle')?.checked; // Check toggle
