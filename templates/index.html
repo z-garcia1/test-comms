@@ -846,9 +846,6 @@
 #extract-session-div.active, #open-toolbox-div.active{
     display: block !important;
 }
-#chat-controls{
-position: sticky;
-}
     </style>
 </head>
 <body>
@@ -1513,13 +1510,16 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function updateSearchIconColor() {
-    const searchIcon = document.getElementById('searchToggleIcon'); // Get the SVG element
-    const webSearchEnabled = document.getElementById('webSearchToggle')?.checked; // Check if toggle is enabled
+    const searchIcon = document.getElementById('searchToggleIcon'); // Get the SVG
+    const webSearchEnabled = document.getElementById('webSearchToggle')?.checked; // Check toggle
 
-    if (webSearchEnabled) {
-        searchIcon.setAttribute("stroke", "blue");  // ✅ Change to blue when enabled
-    } else {
-        searchIcon.setAttribute("stroke", "black"); // ✅ Reset to black when disabled
+    if (searchIcon) {
+        // ✅ Get all elements inside the SVG that have a "stroke" attribute
+        const strokeElements = searchIcon.querySelectorAll("[stroke]");
+
+        strokeElements.forEach(element => {
+            element.setAttribute("stroke", webSearchEnabled ? "blue" : "black"); // ✅ Change stroke color dynamically
+        });
     }
 }
     
