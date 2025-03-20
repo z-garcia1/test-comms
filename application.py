@@ -130,41 +130,27 @@ def resize_image(file_path, max_size=240):
     """Resizes an image before encoding to Base64 to avoid large payloads."""
     try:
         with Image.open(file_path) as img:
-            original_size = img.size
-            img.thumbnail((max_size, max_size))  # ✅ Resize while maintaining aspect ratio
+            original_size = img.size  # Store original size for debugging
+            img.thumbnail((max_size, max_size))  # Resize while maintaining aspect ratio
 
-            # ✅ Detect image format
-            img_format = img.format if img.format else "PNG"
-
+            # Save resized image to memory
             img_buffer = io.BytesIO()
-            img.save(img_buffer, format=img_format)  # ✅ Explicitly set format
+            img.save(img_buffer, format=img.format)
             img_buffer.seek(0)
 
+            # Overwrite original file with resized version
             with open(file_path, "wb") as f:
                 f.write(img_buffer.getvalue())
 
-            print(f"Resized image from {original_size} to {img.size}, format: {img_format}")
+            print(f"Resized image from {original_size} to {img.size}")
     except Exception as e:
         print(f"Error resizing image: {e}")
 
-
 ### ✅ File Processing Functions ###
-import magic
 def convert_image_to_base64(file_path):
-    """Converts an image file to a Base64 string using python-magic for MIME type detection."""
-    try:
-        # ✅ Use `python-magic` to detect the exact MIME type
-        mime = magic.Magic(mime=True)
-        mime_type = mime.from_file(file_path)
-
-        with open(file_path, "rb") as file:
-            base64_data = base64.b64encode(file.read()).decode("utf-8")
-
-        return f"data:{mime_type};base64,{base64_data}"  # ✅ Ensures correct MIME type
-    except Exception as e:
-        print(f"Error converting image to Base64: {e}")
-        return None
-
+    """Converts an image file to a Base64 string."""
+    with open(file_path, "rb") as file:
+        return base64.b64encode(file.read()).decode("utf-8")
 
 def extract_text_from_pdf(file_path):
     """Extracts text from a PDF file, falling back to pdfplumber if fitz fails."""
@@ -300,17 +286,17 @@ def filter_history(history, dynamic_keywords):
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Handles user messages & file uploads, including image processing."""
+    """Handles user messages & file uploads, allowing text-only requests as well."""
     
     chat_memory = session.get('chat_memory', [])
 
-    # Check if request contains JSON or form data
+    # Check if the request contains JSON or form data
     if request.is_json:
         user_message = request.json.get("message", "").strip()
     else:
         user_message = request.form.get("message", "").strip()
 
-    files = request.files.getlist("file")  # ✅ Get all uploaded files
+    files = request.files.getlist("file")  # Allow multiple file uploads
 
     if not user_message and not files:
         return jsonify({"error": "No input provided"}), 400
@@ -321,73 +307,78 @@ def chat():
     for file in files:
         file_ext = file.filename.split(".")[-1].lower()
 
-        # ✅ Ensure only one image file is uploaded at a time
-        if file_ext in ["png", "jpeg", "jpg"]:
-            if len(files) > 1:
-                return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
+        # Ensure only one image file is uploaded at a time
+        image_files = [file for file in files if file.filename.split(".")[-1].lower() in ["png", "jpeg", "jpg"]]
+        if len(image_files) > 1:
+            return jsonify({"error": "Only one image file can be uploaded at a time."}), 400
 
-            # ✅ Save the image file first
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(file_path)
 
             try:
-                # ✅ Resize image before encoding
-                resize_image(file_path)
-
-                # ✅ Convert image to Base64 using `python-magic`
+                # Convert image to Base64 for AI processing
                 image_base64 = convert_image_to_base64(file_path)
-
                 content.append({
                     "type": "image",
                     "source": {
                         "type": "base64",
-                        "media_type": magic.Magic(mime=True).from_file(file_path),
+                        "media_type": f"image/{file_ext}",
                         "data": image_base64
                     }
                 })
             finally:
-                os.remove(file_path)  # ✅ Clean up image after processing
-            continue  # ✅ Skip text extraction for images
+                os.remove(file_path)  # Cleanup image
+            continue  # Skip text processing for images
 
-
-        elif file_ext in ALLOWED_EXTENSIONS:  # ✅ Document Handling
-            try:
-                text = process_file(file_path, file_ext)
-                if text:
-                    text_from_files.append(text)
-            finally:
-                os.remove(file_path)  # ✅ Cleanup after text extraction
-
-        else:
+        if file_ext not in ALLOWED_EXTENSIONS:
             return jsonify({"error": f"Invalid file type: {file_ext}"}), 400
 
-    # ✅ Merge extracted text from all documents
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(file_path)
+
+        try:
+            # Extract text from supported document types
+            text = process_file(file_path, file_ext)
+            if text:
+                text_from_files.append(text)
+        finally:
+            os.remove(file_path)  # Cleanup document
+
+    # Combine extracted text from all documents
     combined_text = "\n\n".join(text_from_files)
 
-    if len(combined_text) > 800_000:  # Trim if too long
-        combined_text = combined_text[:800_000]
+    # Ensure text fits within Claude's context window (~200K tokens)
+    if len(combined_text) > 800_000:  # Approx. 200K tokens
+        combined_text = combined_text[:800_000]  # Trim excess text
 
     if combined_text:
         chat_memory.append({"role": "user", "content": combined_text})
+    
+    if combined_text:
         content.append({"type": "text", "text": combined_text})
 
-    # ✅ Store user message before sending to Claude
+    # Store user input in chat memory before invoking Claude
     chat_memory.append({"role": "user", "content": user_message})
 
-    # ✅ Send to Claude AI
+    # Invoke Claude AI for processing
     ai_response = invoke_claude_bedrock(content, chat_memory)
 
-    # ✅ Store AI response in chat memory
+    # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
 
-    # ✅ Format AI response for display
+  # Format the response for display
     formatted_response = format_ai_response(ai_response)
 
+    #quick_prompt = request.form.get("quickPrompt")
+    #writing_style = data.get("writingStyle")
+    print("Response: 200")
     session['chat_memory'] = chat_memory
     return jsonify({
         "response": f"""<br><br><div><pre>{formatted_response}</pre><button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
     })
+
 
 @app.route("/reset_chat", methods=["POST"])
 def reset_chat():
