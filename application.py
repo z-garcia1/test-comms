@@ -35,13 +35,13 @@ bedrock = boto3.client('bedrock-runtime',
                        region_name=os.environ.get('Region'),
                        aws_access_key_id=os.environ.get('AccessKeyId'),
                        aws_secret_access_key=os.environ.get('SecretAccessKey'))
-
 # Flask app setup
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 CORS(app)
 
 TI_LOGIN_URL = "https://entlogin.ti.com/as/authorization.oauth2?response_type=code&client_id=DCIT_ALL_COMMS_IR_AI&redirect_uri=https%3A%2F%2Fern2xy8fzd.us-east-1.awsapprunner.com%2Fcallback&prompt=login"
+TI_USERINFO_URL = "https://entlogin.ti.com/idp/userinfo.openid"
 
 TOKEN_CHARACTERS = string.ascii_letters + string.digits + "!?@#$&%"
 VALID_TOKENS = []
@@ -99,6 +99,16 @@ def callback():
     new_token = generate_secure_token()
     expiration_time = time.time() + 28800  # Token expires in 24 hours
     VALID_TOKENS.append((new_token, expiration_time))
+    token_data = token_response.json()
+    access_token = token_data.get("access_token")
+    user_info_response = requests.get(
+        "https://entlogin.ti.com/idp/userinfo.openid",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    user_info = user_info_response.json()
+
+    print(user_info)  # You’ll find the aID or employee ID here
+    session["aID"] = user_info.get("aID") or user_info.get("employee_id")
     time.sleep(1)
     response = redirect("/loading")
     response.set_cookie("token", new_token, max_age=28800)
