@@ -291,7 +291,13 @@ def filter_history(history, dynamic_keywords):
     selected_indexes = sorted(selected_indexes.union(last_one_indexes))
     
     return [history[i] for i in selected_indexes]
+  
+def extract_urls(text):
+    url_pattern = r'(https?://[^\s]+|www\.[^\s]+)'
+    return re.findall(url_pattern, text)
 
+def clean_url(url):
+    return f"https://{url}" if url.startswith("www.") else url
 
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
 @app.route("/chat", methods=["POST"])
