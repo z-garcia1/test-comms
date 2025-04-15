@@ -438,7 +438,7 @@ def invoke_claude_bedrock(content, chat_memory):
     }
 
     response = bedrock.invoke_model(
-        modelId="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        modelId="anthropic.claude-3-7-sonnet-20250219-v1:0",
         contentType="application/json",
         accept="application/json",
         body=json.dumps(payload)
