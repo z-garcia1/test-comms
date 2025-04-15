@@ -31,7 +31,8 @@ search = TavilySearchAPIWrapper()
 tavily_tool = TavilySearchResults(api_wrapper=search)
 
 # AWS Bedrock client setup
-bedrock = boto3.client('bedrock-runtime', 
+boto_session = boto3.session.Session(region_name="us-east-1")
+bedrock = boto_session.client('bedrock-runtime', 
                        region_name=os.environ.get('Region'),
                        aws_access_key_id=os.environ.get('AccessKeyId'),
                        aws_secret_access_key=os.environ.get('SecretAccessKey'))
@@ -438,7 +439,7 @@ def invoke_claude_bedrock(content, chat_memory):
     }
 
     response = bedrock.invoke_model(
-        modelId="arn:aws:bedrock:us-east-1:851725179891:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        modelId="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
         contentType="application/json",
         accept="application/json",
         body=json.dumps(payload)
