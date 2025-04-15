@@ -291,13 +291,7 @@ def filter_history(history, dynamic_keywords):
     selected_indexes = sorted(selected_indexes.union(last_one_indexes))
     
     return [history[i] for i in selected_indexes]
-  
-def extract_urls(text):
-    url_pattern = r'(https?://[^\s]+|www\.[^\s]+)'
-    return re.findall(url_pattern, text)
 
-def clean_url(url):
-    return f"https://{url}" if url.startswith("www.") else url
 
 ### ✅ Chat Route (Supports Text, Files, and Web Search) ###
 @app.route("/chat", methods=["POST"])
@@ -392,9 +386,9 @@ def chat():
     print("Response: 200")
     session['chat_memory'] = chat_memory
     return jsonify({
-        "response": f"""<br><br><div><pre>{formatted_response}</pre><button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
+        "response": f"""<br><br><div><pre>{formatted_response}</pre>
+                        <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
     })
-
 
 @app.route("/reset_chat", methods=["POST"])
 def reset_chat():
@@ -456,7 +450,7 @@ def invoke_claude_bedrock(content, chat_memory):
     }
 
     response = bedrock.invoke_model(
-        modelId="arn:aws:bedrock:us-east-1:851725179891:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        modelId="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
         contentType="application/json",
         accept="application/json",
         body=json.dumps(payload)
@@ -647,4 +641,4 @@ def search_agent():
 
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
