@@ -83,8 +83,6 @@ def home():
         return redirect("/login")
     return render_template("acknowledge.html")
 
-PUBLIC_ROUTES = {"/chat", "/reset_chat"}
-
 @app.route("/login")
 def login():
     # Redirect the user to the TI login page
@@ -99,16 +97,6 @@ def callback():
     new_token = generate_secure_token()
     expiration_time = time.time() + 28800  # Token expires in 24 hours
     VALID_TOKENS.append((new_token, expiration_time))
-    token_data = token_response.json()
-    access_token = token_data.get("access_token")
-    user_info_response = requests.get(
-        "https://entlogin.ti.com/idp/userinfo.openid",
-        headers={"Authorization": f"Bearer {access_token}"}
-    )
-    user_info = user_info_response.json()
-
-    print(user_info)  # You’ll find the aID or employee ID here
-    session["aID"] = user_info.get("aID") or user_info.get("employee_id")
     time.sleep(1)
     response = redirect("/loading")
     response.set_cookie("token", new_token, max_age=28800)
