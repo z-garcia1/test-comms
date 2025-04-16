@@ -1060,6 +1060,7 @@ async function sendMessage(forceMessage = null) {
     const fileInput = document.getElementById('fileUpload');
     const webSearchEnabled = document.getElementById('webSearchToggle')?.checked;
     const promptWhispererEnabled = document.getElementById("promptWhispererEnabled")?.checked;
+    document.getElementById('fileInfo').style.display = "none";
 
     let query = forceMessage || userInput.value.trim();
 
@@ -1068,7 +1069,16 @@ async function sendMessage(forceMessage = null) {
         return;
     }
 
-    // 🌟 Handle Prompt Whisperer Flow
+    // 👤 Always show original user message
+    if (!forceMessage) {
+        const userMessageElement = document.createElement('div');
+        userMessageElement.className = 'chat-message user';
+        userMessageElement.textContent = query;
+        chatBox.appendChild(userMessageElement);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // 🧠 Prompt Whisperer active?
     if (!forceMessage && promptWhispererEnabled) {
         const spinner = document.createElement("div");
         spinner.className = "spinner";
@@ -1088,13 +1098,13 @@ async function sendMessage(forceMessage = null) {
 
             const refinedPrompt = data.ai_response || query;
 
-            // 👤 Show refined prompt as new user message
-            const userMessageElement = document.createElement('div');
-            userMessageElement.className = 'chat-message user';
-            userMessageElement.textContent = refinedPrompt;
-            chatBox.appendChild(userMessageElement);
+            // 👤 Show refined prompt as a second user-style message
+            const refinedUserMessageElement = document.createElement('div');
+            refinedUserMessageElement.className = 'chat-message user';
+            refinedUserMessageElement.textContent = refinedPrompt;
+            chatBox.appendChild(refinedUserMessageElement);
 
-            // ⏎ Re-send using the refined prompt
+            // ⏎ Resend using the refined prompt
             document.getElementById("promptWhispererEnabled").checked = false;
             userInput.value = '';
             sendMessage(refinedPrompt);
@@ -1123,14 +1133,6 @@ async function sendMessage(forceMessage = null) {
         requestData = {
             message: `System Instructions: ${systemPrompt} Temperature: ${temperature}, Top-p: ${topP}, Top-k: ${topK}\n\n${query}`
         };
-    }
-
-    // 🗨️ Show user message
-    if (!forceMessage) {
-        const userMessageElement = document.createElement('div');
-        userMessageElement.className = 'chat-message user';
-        userMessageElement.textContent = query;
-        chatBox.appendChild(userMessageElement);
     }
 
     userInput.value = '';
@@ -1197,7 +1199,6 @@ async function sendMessage(forceMessage = null) {
     }
 
     fileInput.value = "";
-    document.getElementById('fileInfo').style.display = "none";
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
