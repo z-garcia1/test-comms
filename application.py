@@ -360,22 +360,21 @@ def chat():
     # Store user input in chat memory before invoking Claude
     chat_memory.append({"role": "user", "content": user_message})
 
-    # Invoke Claude AI for processing
-    ai_response = invoke_claude_bedrock(content, chat_memory)
+    # ✅ Updated: Invoke Claude and capture 'incomplete' flag
+    ai_response, incomplete = invoke_claude_bedrock(content, chat_memory)
 
     # Store AI response in chat memory
     chat_memory.append({"role": "assistant", "content": ai_response})
 
-  # Format the response for display
+    # Format the response for display
     formatted_response = format_ai_response(ai_response)
 
-    #quick_prompt = request.form.get("quickPrompt")
-    #writing_style = data.get("writingStyle")
     print("Response: 200")
     session['chat_memory'] = chat_memory
     return jsonify({
         "response": f"""<br><br><div><pre>{formatted_response}</pre>
-                        <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>"""
+                        <button class="copy-button"><i class="fa-regular fa-copy"></i>&nbsp; Copy</button></div>""",
+        "incomplete": incomplete
     })
 
 @app.route("/reset_chat", methods=["POST"])
@@ -418,41 +417,42 @@ def get_text_from_content(content):
 def invoke_claude_bedrock(content, chat_memory):
     """Sends text-based content to Claude AI via AWS Bedrock, preserving chat history."""
 
-    # Append the new user message (without system prompts) to form full history.
-    full_history = chat_memory + [{"role": "user", "content": content}]
-    
-    # Dynamically determine the important keywords.
-    # For instance, extract keywords from the entire conversation:
-    # Concatenate all text from the full history using our helper function.
-    all_text = " ".join(get_text_from_content(msg.get("content", "")) for msg in full_history)
-    dynamic_keywords = set(extract_keywords(all_text))
+    try:
+        # Build history and extract keywords
+        full_history = chat_memory + [{"role": "user", "content": content}]
+        all_text = " ".join(get_text_from_content(msg.get("content", "")) for msg in full_history)
+        dynamic_keywords = set(extract_keywords(all_text))
+        filtered_history = filter_history(full_history, dynamic_keywords)
 
-    filtered_history = filter_history(full_history, dynamic_keywords)
+        messages = filtered_history
 
-    messages = filtered_history
+        payload = {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 4000,
+            "messages": messages
+        }
 
-    payload = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 4000,
-        "messages": messages  # Include full chat history
-    }
+        response = bedrock.invoke_model(
+            modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            contentType="application/json",
+            accept="application/json",
+            body=json.dumps(payload)
+        )
 
-    response = bedrock.invoke_model(
-        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
-        contentType="application/json",
-        accept="application/json",
-        body=json.dumps(payload)
-    )
+        response_body = response["body"].read().decode("utf-8")
+        result = json.loads(response_body)
 
-    response_body = response["body"].read().decode("utf-8")
-    result = json.loads(response_body)
+        if "content" in result and isinstance(result["content"], list):
+            extracted_text = "\n".join(item["text"] for item in result["content"] if item["type"] == "text")
+        else:
+            extracted_text = "No valid response from Claude."
 
-    if "content" in result and isinstance(result["content"], list):
-        extracted_text = "\n".join(item["text"] for item in result["content"] if item["type"] == "text")
-    else:
-        extracted_text = "No valid response from Claude."
+        return extracted_text, False  # incomplete = False
 
-    return extracted_text
+    except Exception as e:
+        fallback_message = "⚠️ Claude response was cut off or failed due to memory limits."
+        print(f"[Claude Error] {str(e)}")
+        return fallback_message, True  # incomplete = True
 
 
 def invoke_claude_with_image(file_path, file_ext, user_message):
