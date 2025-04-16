@@ -31,8 +31,7 @@ search = TavilySearchAPIWrapper()
 tavily_tool = TavilySearchResults(api_wrapper=search)
 
 # AWS Bedrock client setup
-boto_session = boto3.session.Session(region_name="us-east-1")
-bedrock = boto_session.client('bedrock-runtime', 
+bedrock = boto3.client('bedrock-runtime', 
                        region_name=os.environ.get('Region'),
                        aws_access_key_id=os.environ.get('AccessKeyId'),
                        aws_secret_access_key=os.environ.get('SecretAccessKey'))
@@ -611,6 +610,7 @@ def upload_pdf():
     return jsonify({"markdown": "\n".join(markdown_output)})
 
 LAMBDA_URL_WEB = "https://iauc34s2dgg66w4oxlb7wfr5d40dxgqp.lambda-url.us-east-1.on.aws/"
+LAMBDA_URL_PROMPT = ""
 
 @app.route("/search-agent", methods=["POST"])
 def search_agent():
@@ -622,6 +622,22 @@ def search_agent():
         return jsonify({"error": "Empty query"})
     chat_memory = session.get('chat_memory', [])
     response = requests.post(LAMBDA_URL_WEB, json={"query": query})
+    lambda_response = response.json()
+    ai_response = lambda_response.get("ai_response", "No response provided.")
+    chat_memory.append({"role": "assistant", "content": ai_response})
+    session['chat_memory'] = chat_memory
+    return jsonify(lambda_response)
+
+@app.route("/prompt-whisperer", methods=["POST"])
+def prompt_agent():
+    data = request.get_json(silent=True)
+    if not data or "query" not in data:
+        return jsonify({"error": "Query cannot be empty"}), 400
+    query = data["query"].strip()
+    if not query:
+        return jsonify({"error": "Empty query"})
+    chat_memory = session.get('chat_memory', [])
+    response = requests.post(LAMBDA_URL_PROMPT, json={"query": query})
     lambda_response = response.json()
     ai_response = lambda_response.get("ai_response", "No response provided.")
     chat_memory.append({"role": "assistant", "content": ai_response})
