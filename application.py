@@ -633,16 +633,18 @@ def prompt_agent():
     data = request.get_json(silent=True)
     if not data or "query" not in data:
         return jsonify({"error": "Query cannot be empty"}), 400
-    query = data["query"].strip()
-    if not query:
+    prompt = data["query"].strip()
+    if not prompt:
         return jsonify({"error": "Empty query"})
     chat_memory = session.get('chat_memory', [])
-    response = requests.post(LAMBDA_URL_PROMPT, json={"query": query})
+    response = requests.post(LAMBDA_URL_PROMPT, json={"prompt": prompt})
     lambda_response = response.json()
-    ai_response = lambda_response.get("ai_response", "No response provided.")
-    chat_memory.append({"role": "assistant", "content": ai_response})
+
+    refined_prompt = lambda_response.get("refined_prompt", "Error returning prompt")
+  
+    chat_memory.append({"role": "assistant", "content": refined_prompt})
     session['chat_memory'] = chat_memory
-    return jsonify(lambda_response)
+    return jsonify({"ai_response": refined_prompt})
 
 ### ✅ Flask App Execution for AWS App Runner ###
 if __name__ == "__main__":
