@@ -1044,18 +1044,61 @@
     </div>
 </div>
 <script>
-async function sendMessage() {
+async function sendMessage(forceMessage = null) {
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
     const fileInput = document.getElementById('fileUpload');
     const webSearchEnabled = document.getElementById('webSearchToggle')?.checked;
+    const promptWhispererEnabled = document.getElementById("promptWhispererEnabled")?.checked;
 
-    const query = userInput.value.trim();
+    let query = forceMessage || userInput.value.trim();
+
     if (!query && fileInput.files.length === 0) {
         alert("Please enter a message or upload a file before sending.");
         return;
     }
 
+    // 🌟 Handle Prompt Whisperer Flow
+    if (!forceMessage && promptWhispererEnabled) {
+        const spinner = document.createElement("div");
+        spinner.className = "spinner";
+        spinner.style.display = 'block';
+        chatBox.appendChild(spinner);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            const whisperResponse = await fetch("/prompt-whisperer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query })
+            });
+
+            const data = await whisperResponse.json();
+            spinner.remove();
+
+            const refinedPrompt = data.ai_response || query;
+
+            // 👤 Show refined prompt as new user message
+            const userMessageElement = document.createElement('div');
+            userMessageElement.className = 'chat-message user';
+            userMessageElement.textContent = refinedPrompt;
+            chatBox.appendChild(userMessageElement);
+
+            // ⏎ Re-send using the refined prompt
+            document.getElementById("promptWhispererEnabled").checked = false;
+            userInput.value = '';
+            sendMessage(refinedPrompt);
+            return;
+
+        } catch (error) {
+            spinner.remove();
+            console.error("Prompt Whisperer error:", error);
+            chatBox.innerHTML += `<div class="chat-message ai error">Prompt Whisperer failed: ${error.message}</div>`;
+            return;
+        }
+    }
+
+    // 🌐 Choose endpoint and build request
     let requestData = {};
     const apiEndpoint = webSearchEnabled ? "/search-agent" : "/chat";
 
@@ -1072,9 +1115,8 @@ async function sendMessage() {
         };
     }
 
-    console.log("Sending request to:", apiEndpoint, "with data:", requestData);
-
-    if (query) {
+    // 🗨️ Show user message
+    if (!forceMessage) {
         const userMessageElement = document.createElement('div');
         userMessageElement.className = 'chat-message user';
         userMessageElement.textContent = query;
@@ -1087,7 +1129,6 @@ async function sendMessage() {
     spinner.className = "spinner";
     spinner.style.display = 'block';
     chatBox.appendChild(spinner);
-
     chatBox.scrollTop = chatBox.scrollHeight;
 
     try {
@@ -1112,14 +1153,12 @@ async function sendMessage() {
             });
         }
 
-        console.log("Raw Response:", response);
-
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
+
         spinner.remove();
         const data = await response.json();
-        console.log("Parsed Response Data:", data);
 
         const aiResponse = data.ai_response || data.response;
         const sources = data.sources || [];
@@ -1128,10 +1167,8 @@ async function sendMessage() {
             throw new Error("Empty response from server.");
         }
 
-        // ✅ Construct HTML for AI response
         let aiMessageHTML = `<div class="chat-message ai"><pre>${aiResponse}</pre>`;
 
-        // ✅ Add sources as clickable links
         if (sources.length > 0) {
             aiMessageHTML += `<h4>Sources:</h4><ul>`;
             sources.forEach(source => {
@@ -1141,18 +1178,19 @@ async function sendMessage() {
         }
 
         aiMessageHTML += `</div>`;
-
-        // ✅ Append to chat
         chatBox.innerHTML += aiMessageHTML;
 
     } catch (error) {
+        spinner.remove();
         console.error("Error:", error);
         chatBox.innerHTML += `<div class="chat-message ai error">Error: ${error.message}</div>`;
-    } finally {spinner.remove();}
+    }
+
     fileInput.value = "";
     document.getElementById('fileInfo').style.display = "none";
     chatBox.scrollTop = chatBox.scrollHeight;
 }
+
 
 // Handle file upload display
 document.addEventListener("DOMContentLoaded", function () {
