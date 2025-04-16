@@ -849,6 +849,11 @@
 #chat-controls.active {
     display: block; /* Show when active */
 }
+#promptWhispererToggle.active {
+    background-color: #e6f7ff;
+    border: 1px solid #1e90ff;
+    color: #1e90ff;
+}
     </style>
 </head>
 <body>
@@ -1030,6 +1035,13 @@
                             <span class="tooltip">Search the web</span>
                         </button>
                     </div>
+                    <div class="tooltip-container">
+                        <button class="file" id="promptWhispererToggle">
+                            <i class="fa-solid fa-magic-wand-sparkles"></i>
+                            <span class="tooltip">Prompt Whisperer</span>
+                        </button>
+                    </div>
+                    <input type="checkbox" id="promptWhispererEnabled" class="hide">
                 </div>
             <input type="checkbox" class="hide" id="webSearchToggle" onclick="updateSearchIconColor()">
             <div class="hide">Upload file: docx, pptx, pdf, xlsx, jpeg, png, csv</div>
@@ -1231,7 +1243,13 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("fileUpload").click();
     });
 });
-
+//whisper
+document.getElementById("promptWhispererToggle")?.addEventListener("click", function () {
+    const checkbox = document.getElementById("promptWhispererEnabled");
+    checkbox.checked = !checkbox.checked;
+    this.classList.toggle("active", checkbox.checked); // Optional: style toggle
+});
+    
  //Copy button
 document.addEventListener("DOMContentLoaded", function() {
     // Use event delegation for dynamically added buttons
