@@ -1098,15 +1098,17 @@ async function sendMessage(forceMessage = null) {
 
             const refinedPrompt = data.ai_response || query;
 
-            // 👤 Show refined prompt as a second user-style message
+            // 👤 Show refined prompt
             const refinedUserMessageElement = document.createElement('div');
             refinedUserMessageElement.className = 'chat-message user';
             refinedUserMessageElement.textContent = refinedPrompt;
             chatBox.appendChild(refinedUserMessageElement);
 
-            // ⏎ Resend using the refined prompt
+            // Auto-disable Whisperer
             document.getElementById("promptWhispererEnabled").checked = false;
             userInput.value = '';
+
+            // Auto-send refined prompt
             sendMessage(refinedPrompt);
             return;
 
@@ -1180,6 +1182,18 @@ async function sendMessage(forceMessage = null) {
         }
 
         let aiMessageHTML = `<div class="chat-message ai"><pre>${aiResponse}</pre>`;
+
+        if (data.incomplete) {
+            aiMessageHTML += `
+                <div class="chat-message ai">
+                    <em>[Response was cut off due to memory limits. Continuing automatically... 🔁]</em>
+                </div>`;
+
+            // Auto-continue
+            setTimeout(() => {
+                sendMessage("Continue from where you left off.");
+            }, 500);
+        }
 
         if (sources.length > 0) {
             aiMessageHTML += `<h4>Sources:</h4><ul>`;
