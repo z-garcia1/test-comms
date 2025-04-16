@@ -1060,6 +1060,7 @@ async function sendMessage(forceMessage = null) {
     const fileInput = document.getElementById('fileUpload');
     const webSearchEnabled = document.getElementById('webSearchToggle')?.checked;
     const promptWhispererEnabled = document.getElementById("promptWhispererEnabled")?.checked;
+    const promptWhispererToggle = document.getElementById("promptWhispererToggle");
     document.getElementById('fileInfo').style.display = "none";
 
     let query = forceMessage || userInput.value.trim();
@@ -1104,8 +1105,10 @@ async function sendMessage(forceMessage = null) {
             refinedUserMessageElement.textContent = refinedPrompt;
             chatBox.appendChild(refinedUserMessageElement);
 
-            // Auto-disable Whisperer
-            document.getElementById("promptWhispererEnabled").checked = false;
+            // Auto-disable Prompt Whisperer + reset button style
+            const promptCheckbox = document.getElementById("promptWhispererEnabled");
+            promptCheckbox.checked = false;
+            promptWhispererToggle.classList.remove("active");
             userInput.value = '';
 
             // Auto-send refined prompt
