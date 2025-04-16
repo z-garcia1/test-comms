@@ -610,7 +610,7 @@ def upload_pdf():
     return jsonify({"markdown": "\n".join(markdown_output)})
 
 LAMBDA_URL_WEB = "https://iauc34s2dgg66w4oxlb7wfr5d40dxgqp.lambda-url.us-east-1.on.aws/"
-LAMBDA_URL_PROMPT = ""
+LAMBDA_URL_PROMPT = "https://pl4eigxofmjui6fm3ltrjeewwq0kdoxz.lambda-url.us-east-1.on.aws/"
 
 @app.route("/search-agent", methods=["POST"])
 def search_agent():
